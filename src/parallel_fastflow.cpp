@@ -228,10 +228,6 @@ int DetermineWorkers(int def) {
     return def;
 }
 
-int DetermineLength() {
-
-}
-
 /**
  * @brief A Parallel Wavefront Computation using the library FastFlow.
  *        It uses a Farm with Feedback Channels.
