@@ -42,7 +42,7 @@ rule CUSTOM_COMMAND
 # Rule for re-running cmake.
 
 rule RERUN_CMAKE
-  command = /Applications/CLion.app/Contents/bin/cmake/mac/aarch64/bin/cmake --regenerate-during-build -S"/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Patter" -B"/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Patter/cmake-build-debug"
+  command = /Applications/CLion.app/Contents/bin/cmake/mac/aarch64/bin/cmake --regenerate-during-build -S"/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern" -B"/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern/cmake-build-debug"
   description = Re-running CMake...
   generator = 1
 

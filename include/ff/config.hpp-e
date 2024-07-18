@@ -101,7 +101,7 @@
  *       ff_realNumCores() (which is a costly function)
  */
 #if !defined NUM_REAL_CORES
-#define FF_NUM_REAL_CORES -1
+#define FF_NUM_REAL_CORES       12
 #else
 #define FF_NUM_REAL_CORES NUM_REAL_CORES
 #endif

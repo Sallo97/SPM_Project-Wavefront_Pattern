@@ -1,4 +1,4 @@
-# Install script for directory: /Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Patter
+# Install script for directory: /Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Patter/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

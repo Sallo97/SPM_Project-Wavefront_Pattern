@@ -1,3 +1,3 @@
-/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Patter/cmake-build-debug/CMakeFiles/Project.dir
-/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Patter/cmake-build-debug/CMakeFiles/edit_cache.dir
-/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Patter/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern/cmake-build-debug/CMakeFiles/Project.dir
+/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern/cmake-build-debug/CMakeFiles/rebuild_cache.dir
