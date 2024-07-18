@@ -1,9 +1,0 @@
-# ninja log v6
-3	1381	1721289698242916250	CMakeFiles/Project.dir/src/parallel_fastflow.cpp.o	2c574a4760039ea7
-271	296	1721289722735045709	Project	eab047b203ed963
-1	35	1721290034413781032	build.ninja	f8e218e8de921a66
-2	1422	1721238981085385272	CMakeFiles/Project.dir/src/new_parallel_fastflow.cpp.o	c34757545fbc4647
-2	271	1721289722466353263	CMakeFiles/Project.dir/src/sequential.cpp.o	b16cb6eff6729c4d
-1	35	1721290034413781032	build.ninja	f8e218e8de921a66
-2	1434	1721290034422236937	CMakeFiles/Project.dir/src/parallel_fastflow.cpp.o	2c574a4760039ea7
-1435	1460	1721290035854926576	Project	9c9d9ca4217a5dfb
