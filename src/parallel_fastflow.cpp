@@ -253,10 +253,10 @@ int main(int argc, char* argv[]) {
     const int n{static_cast<int>(std::stoll(argv[1]))};
     // Initialize Matrix
     SquareMtx mtx(n);
-    mtx.PrintMtx();
 
     // Setting number of workers
     int num_workers = DetermineWorkers(6);
+
 
     // Creating the Farm
     Emitter emt{mtx, num_workers};
@@ -273,15 +273,20 @@ int main(int argc, char* argv[]) {
 
     // Starting the farm
     const auto start = std::chrono::steady_clock::now();
-    if(farm.run_and_wait_end()<0) {
-        std::cerr<<"While running farm";
-        return -1;
+
+    // If we have a 1x1 matrix, then we do not need
+    // to apply the computation
+    if (n > 1) {
+        if(farm.run_and_wait_end()<0) {
+            std::cerr<<"While running farm";
+            return -1;
+        }
     }
+
     const auto end = std::chrono::steady_clock::now();
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Time taken for parallel version: " << duration.count() << " milliseconds" << std::endl;
 
-    mtx.PrintMtx();
     return 0;
 }
 
