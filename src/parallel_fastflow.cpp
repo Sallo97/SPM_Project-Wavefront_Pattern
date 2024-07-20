@@ -1,18 +1,3 @@
-/**
-* @file parallel_fastflow.cpp
- * @brief This code is a parallel implementation of the Wavefront computation using the FastFlow library.
- * @details It initialize a matrix of dimension NxN (parameter given as input).
- *          All values are set to 0 except the one in the major diagonal s.t.:
- *          ∀i in [0, N].mtx[i][i] = (i + 1) / n.
- *          Then all elements in the upper part of the major diagonal are computed s.t.:
- *          mtx[i][j] = square_cube( dot_product(v_m, v_m+k) ).
- *          This is parallelized by using a farm with feedback channels.
- *          The Emitter send to the worker a chunck of elements of the current diagonal to compute.
- *          The Workers compute them and send a "done" message to the Emitter.
- *          When all elements of the diagonal have been computer, the Emitter repeat
- *          the process for the next diagonal.
- * @author Salvatore Salerno
- */
 
 #include<vector>
 #include<iostream>
@@ -92,7 +77,7 @@ struct Task{
 };
 
 /**
- * @brief Gives to the Worker the elemnts of the upper diagonal
+ * @brief Gives to the Worker the elements of the upper diagonal
  *        to compute following the Wavefront Pattern.
  *        Assuming there are z elements in diagonal i, each
  *        Worker will return a value i that specify the number
@@ -205,7 +190,8 @@ struct Worker: ff::ff_node_t<Task, int> {
                                                                     // that contains the same elements
                                                                     // Computing the DotProduct
             for(int elem=0; elem < j-i ; ++elem) {
-                temp += t->mtx.GetValue(idx_vecr_row, idx_vecr_col + elem) * t->mtx.GetValue(idx_vecc_row, idx_vecc_col + elem);
+                temp += t->mtx.GetValue(idx_vecr_row, idx_vecr_col + elem) *
+                                t->mtx.GetValue(idx_vecc_row, idx_vecc_col + elem);
             }
 
             // Storing the result
@@ -237,12 +223,12 @@ int DetermineWorkers(int def) {
 int main(int argc, char* argv[]) {
     // Setting length row/column matrix
     if(argc!=2) {
-        std::cerr << "You must pass as argument the lenght of the square matrix to generate"
+        std::cerr << "You must pass as argument the length of the square matrix to generate"
                   << std::endl;
         return -1;
     }
     if (std::stoll(argv[1]) <= 0) {
-        std::cerr << "Invalid lenght! The lenght must be a positive integer != 0"
+        std::cerr << "Invalid length! The lenght must be a positive integer != 0"
                   << std::endl;
         return -1;
     }

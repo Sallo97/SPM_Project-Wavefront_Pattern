@@ -86,7 +86,7 @@ void ComputeMatrix(const int n, SquareMtx& mtx) {
                       // the DotProduct computations.
 
     for (int iter{0}; iter < n; ++iter) { // iter = number of the current diagonal
-        // Setting parameters for current iteration
+                                          // Setting parameters for current iteration
         int i = 0;
         int j = iter + 1;
 
