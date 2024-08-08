@@ -1,281 +1,184 @@
-/**
-* @file parallel_fastflow.cpp
- * @brief This code is a parallel implementation of the Wavefront computation using the FastFlow library.
- * @details It initialize a matrix of dimension NxN (parameter given as input).
- *          All values are set to 0 except the one in the major diagonal s.t.:
- *          ∀i in [0, N].mtx[i][i] = (i + 1) / n.
- *          Then all elements in the upper part of the major diagonal are computed s.t.:
- *          mtx[i][j] = square_cube( dot_product(v_m, v_m+k) ).
- *          This is parallelized by using a farm with feedback channels.
- *          The Emitter send to the worker a chunck of elements of the current diagonal to compute.
- *          The Workers compute them and send a "done" message to the Emitter.
- *          When all elements of the diagonal have been computer, the Emitter repeat
- *          the process for the next diagonal.
- * @author Salvatore Salerno
- */
-#include <mpi.h>
-#include <iostream>
-#include <vector>
 #include <cmath>
+#include <iostream>
+#include <mpi.h>
+#include <vector>
+#include "utils/diag_info.h"
+#include "utils/square_matrix.h"
+#include "utils/elem_info.h"
 #define EOS_MESSAGE (-1)
 #define MASTER_RANK 0
-using double_vec = std::vector<double>;
-
-
-// Struct giving informations on an element of the matrix
-// We use it in the Master to have a more clear algorithm
-struct ElemInfo {
-    int idx_row;
-    int idx_col;
-};
-
-// Struct for our Square Matrix
-// The matrix is in reality two vectors:
-// rows which stores all the row of the matrix
-// cols which stores all the cols of the matrix
-// This is done to better optimize the parallelization
-// of the dotProduct, losing in memory efficency
-struct VecMatrix {
-    /**
-     * @brief Creates the vectors of rows and columns
-     *        each contaning the values of the first
-     *        major diagonal s.t.
-     *        ∀m in [0, n].mtx[m][m] = (m + 1) / n.
-     * @param vec_length = length of the vectors
-     */
-    explicit VecMatrix(int vec_length) {
-        // Initializing rows_vector
-        rows_vector.reserve(vec_length);
-        cols_vector.reserve(vec_length);
-        for (int i = 0; i < vec_length; ++i) {
-            double val = static_cast<double>(i + 1) / static_cast<double>(vec_length);
-            rows_vector.emplace_back(1, val); // Each sub-vector starts
-            cols_vector.emplace_back(1, val); // length 1 and value (i+1)/n
-        }
-    }
-
-    /**
-        * @brief Returns a reference to the row
-        *        of interest.
-        * @param[in] idx = the idx of the row in the matrix
-    */
-    std::vector<double>& GetRow(int idx) {
-        return rows_vector[idx];
-    }
-
-    /**
-        * @brief Returns a reference to the column
-        *        of interest.
-        * @param[in] idx = the idx of the column in the matrix
-    */
-    std::vector<double>& GetCol(int idx) {
-        return cols_vector[idx];
-    }
-
-    /**
-        * @brief Puts an element of the matrix in the
-        *        appropriate row and column for reuse
-        *        in a following DotProduct
-        * @param[in] x = the element to put.
-        * @param[in] val = the value to store
-    */
-    void PutElement(ElemInfo x, double val) {
-        rows_vector[x.idx_row].push_back(val);
-        cols_vector[x.idx_col].push_back(val);
-    }
-
-    // Parameters
-    std::vector<double_vec>rows_vector;
-    std::vector<double_vec>cols_vector;
-};
+using double_vec = std::vector<std::vector<double>>;
 
 /**
- * @brief Apply the DotProduct sequentially.
- * @param[in] length = length of the vectors to multiply
- * @param[in] mtx = reference to the matrix
- * @param[out] x = the element to compute
+ * @brief Does a DotProduct Computation given the row and col.
+ * @param[in] row_vector = the row to apply the DotProduct
+ * @param[in] col_vector = the col to apply the DotProduct
+ * @param[out] result = where to store the computation
  */
-double SequentialDotProduct(int& length, VecMatrix& mtx, ElemInfo& x) {
-    // Setting up
-    std::vector<double>& row = mtx.GetRow(x.idx_row);
-    std::vector<double>& col = mtx.GetCol(x.idx_col);
-    double sum{0.0};
+void DotProduct(const std::vector<double>& row_vector,
+                const std::vector<double>& col_vector,
+                double& result) {
+    result = 0.0;
+    for(int i = 0; i < row_vector.size(); ++i)
+        result += row_vector[i] * col_vector[i];
+}
 
-    // Beginning DotProduct
+/**
+ * @brief Does a DotProduct Computation for a Sequential case.
+ * @param[in] mtx = reference of the matrix where to apply the computation
+ * @param[in] elem = contains informations regarding the element to compute
+ * @param[in] length = size of the "vectors"
+ * @param[out] result = where to store the computation
+ */
+void DotProduct(const SquareMtx& mtx,
+                int length,
+                const ElemInfo& elem,
+                double& result) {
+    result = 0.0;
     for(int i = 0; i < length; ++i)
-        sum += row[i] * col[i];
-
-    return sum;
+        result += mtx.data[elem.vec1_idx + i] *
+                                mtx.data[elem.vec2_idx + 1];
 }
 
 /**
-    * @brief Delegates the DotProduct to the Workers.
-    * @param[in] length = length of the vectors to multiply
-    * @param[in] numP = number of processes
-    * @param[in] mtx = reference to the matrix
-    * @param[out] x = the element to compute
-*/
-double ParallelDotProduct(int& length, int& num_processes, VecMatrix& mtx,
-                          ElemInfo x, std::vector<double>& local_row,
-                          std::vector<double>& local_col) {
-    // Setting up parameters
-    std::vector<double>& row = mtx.GetRow(x.idx_row);
-    std::vector<double>& col = mtx.GetCol(x.idx_col);
-    local_row.resize(length);
+    * @brief Set the snd_count and dipls array accordingly
+    * @param[in] diag_length = the length of the diagonal where the elem is from.
+    * @param[in] num_processes = the number of processes.
+    * @param[in] idx_fst_elem = the index of the mtx of the first elem in the array to send
+    * @param[in] snd_count = the array snd_count to set
+    * @param[in] displs = the array dipls to set
+ */
+void SetScatterArrays(const int& diag_length,
+                      const int& num_processes,
+                      int idx_fst_elem,
+                      std::vector<int>&snd_count,
+                      std::vector<int>&displs)
+{
+    // Setting common params
+    int chunk_size = std::ceil(diag_length / num_processes);
 
-    // Send the length to all Workers
-    MPI_Bcast(&length, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-    // Scatter the row and column vector
-    // TODO Be aware that for the scatter to work #total_elements % num_processes
-    MPI_Scatter(row.data(),
-                length,
-                MPI_DOUBLE,
-                local_row.data(),
-                length,
-                MPI_DOUBLE,
-                0,
-                MPI_COMM_WORLD);
-
-    MPI_Scatter(col.data(),
-                length,
-                MPI_DOUBLE,
-                local_col.data(),
-                length,
-                MPI_DOUBLE,
-                0,
-                MPI_COMM_WORLD);
-
-    // The root process compute its part of the chunk
-    double local_sum{0.0};
-    for (int i = 0; i < length; ++i)
-        local_sum = local_row[i] * local_col[i];
-
-    // Gather results from all processes
-    double sum{0.0};
-    MPI_Reduce(&local_sum,
-               &sum,
-               1,
-               MPI_DOUBLE,
-               MPI_SUM,
-               0,
-               MPI_COMM_WORLD);
-    return sum;
+    // Setting snd_count and displs
+    for(int i = 0; i < num_processes; ++i) {
+        displs[i] = idx_fst_elem + (i * chunk_size);
+        snd_count[i] = chunk_size;
+    }
+    if(diag_length % num_processes != 0)
+        snd_count[snd_count.size() - 1] = diag_length % num_processes;
 }
 
 /**
-    * @brief The main actor in the computation of the Wavefront Pattern.
-    *        It computes sequentially each diagonal. The dot_product com-
-    *        putation is delegated to the Workers
-    * @param[in] row_length = length of a row/column of the matrix to compute
-    * @param[in] limit = it determines if the diagonal can be computed sequentially
-    *                    by the Emitter or with a ParallelDotProduct.
-*/
-void MasterJob(int& my_rank, int& num_processes, int& row_length,
-                double& local_sum, std::vector<double>& local_row,
-                std::vector<double>& local_col) {
-    std::cout << "sono il Master" << std::endl;
+ * @brief Handles the Parallel Communication for computing the DotProduct
+ * @param[in] num_processes
+ * @param[in] my_rank
+ * @param[out] local_sum
+ * @param[out] total_sum
+ * @param[in] diag_info
+ * @param[in] elem
+ * @param[in] mtx
+ * @param[in] snd_count
+ * @param[in] displs
+ * @param[in] local_row
+ * @param[in] local_col
+ */
+void ParallelComputation(const int& num_processes, const int& my_rank,
+                         double& local_sum, double& total_sum,
+                         const DiagInfo& diag_info, const ElemInfo& elem,
+                         const SquareMtx& mtx,
+                         std::vector<int>& snd_count,
+                         std::vector<int>& displs,
+                         std::vector<double>& local_row,
+                         std::vector<double>& local_col
+                         ) {
+    // Send/Receive Row Vector
+    SetScatterArrays(diag_info.length, num_processes,
+     elem.vec1_idx, snd_count, displs);
+    MPI_Scatterv(mtx.data.data(), snd_count.data(), displs.data(),
+                 MPI_DOUBLE, local_row.data(), snd_count[my_rank],
+                 MPI_DOUBLE, MASTER_RANK, MPI_COMM_WORLD);
 
-    // Initializing Matrix
-    VecMatrix mtx(row_length);
+    // Send/Receive Col. Vector
+    SetScatterArrays(diag_info.length, num_processes,
+                     elem.vec2_idx, snd_count, displs);
+    MPI_Scatterv(mtx.data.data(), snd_count.data(), displs.data(),
+                 MPI_DOUBLE, local_col.data(), snd_count[my_rank],
+                 MPI_DOUBLE, MASTER_RANK, MPI_COMM_WORLD);
 
-    // Beginning Wavefront Pattern
-    int diag_length{0};
-    int limit{64};   // AHAH LIKE SUPERMARIO TODO GIVE IT AS A CMD ARGUMENT
-    for (int current_diag = 0; current_diag < row_length; ++current_diag) {
-        diag_length = row_length - current_diag;
-        for(int k = 0; k < diag_length; ++k) {
-            ElemInfo x{k, current_diag + 1 + k};
-            double val{0};
+    // [COMMON] DotProduct only on local row and local col
+    DotProduct(local_row, local_col, local_sum);
 
-            // Computing the element
-            if(diag_length < limit) {   // diag_length determines the
-                                        // the number of elements of the
-                                        // row vector and col vector
-                                        // for that element
-                val = SequentialDotProduct(diag_length, mtx, x);
-            }else {
-                val = ParallelDotProduct(diag_length,num_processes,mtx,
-                                         x,local_row,local_col);
+    // [COMMON] Call Reduce
+    MPI_Reduce(&local_sum, &total_sum, 1, MPI_DOUBLE, MPI_SUM,
+            MASTER_RANK, MPI_COMM_WORLD);
+}
+
+/**
+ * @brief Handles the Wavefront Computation. It is called by both Master process and the Emitters.
+ * @param my_rank
+ * @param num_processes
+ * @param limit
+ * @param row_length
+ * @param diag_info
+ * @param mtx
+ * @param local_sum
+ * @param local_row
+ * @param local_col
+ * @param snd_count
+ * @param displs
+ */
+void WaveFrontComputation(const int& my_rank, const int& num_processes,
+                          const int& limit, const int& row_length,
+                          double& local_sum, DiagInfo diag_info,
+                          SquareMtx& mtx,
+                          std::vector<double>& local_row,
+                          std::vector<double>& local_col,
+                          std::vector<int>& snd_count,
+                          std::vector<int>& displs) {
+
+    // [COMMON] Compute each diagonal of the matrix
+    double total_sum = 0.0;
+    while(!diag_info.IsLastDiag()) {
+        diag_info.UpdateDiag();
+
+        // [COMMON] Computing the current diagonal
+        for(int i = 0; i < diag_info.length; ++i) {
+            ElemInfo elem{diag_info,i, row_length};
+            int vectors_length = diag_info.current_diag; //length of row and col of DotProduct
+
+            // [COMMON] Compute current element
+            if (vectors_length > limit) {         // [COMMON]
+                                                  // PARALLEL DOTPRODUCT
+                ParallelComputation(num_processes, my_rank, local_sum,
+                                    total_sum, diag_info, elem,
+                                    mtx, snd_count, displs,
+                                    local_row, local_col);
+            }
+            else if(my_rank == MASTER_RANK) {     // [ONLY MASTER]
+                                                  // SEQUENTIAL DOTPRODUCT
+                DotProduct(mtx, vectors_length, elem, total_sum);
             }
 
-            // Storing the element in the matrix
-            mtx.PutElement(x, std::cbrt(val));
+            // [ONLY MASTER] Update matrix
+            if(my_rank == MASTER_RANK)
+                mtx.SetValue(elem.row, elem.col, std::cbrt(total_sum));
         }
     }
-
-    // Ending Workers
-    int end_msg{-1};
-    MPI_Bcast(&end_msg, 1, MPI_INT, 0, MPI_COMM_WORLD);
 }
 
-//TODO Aggiungere descrizione
-void WorkerJob(int& my_rank, int& row_length, double& local_sum,
-                std::vector<double>& local_row, std::vector<double>& local_col) {
-    std::cout << "sono Worker n" << my_rank << std::endl;
-    bool end{false};
-
-    while(!end) {
-
-        // Receiving length
-        int length{0};
-        MPI_Bcast(&length, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-        if(length == -1) {
-            end = true;
-            break;
-        }
-
-        // Receiver the row and column vector using Scatter
-        std::vector<double> row(1, 0.0);
-        std::vector<double> col(1, 0.0);
-        MPI_Scatter(row.data(),
-            length,
-            MPI_DOUBLE,
-            local_row.data(),
-            length,
-            MPI_DOUBLE,
-            0,
-            MPI_COMM_WORLD);
-
-        MPI_Scatter(col.data(),
-            length,
-            MPI_DOUBLE,
-            local_col.data(),
-            length,
-            MPI_DOUBLE,
-            0,
-            MPI_COMM_WORLD);
-
-        // The Worker computes its part of the chunk
-        // The root process compute its part of the chunk
-        for (int i = 0; i < length; ++i)
-            local_sum = local_row[i] * local_col[i];
-
-        double sum{0.0};
-        // Send result
-        MPI_Reduce(&local_sum,
-           &sum,
-           1,
-           MPI_DOUBLE,
-           MPI_SUM,
-           0,
-           MPI_COMM_WORLD);
-    }
-}
 
 /**
  * @brief A Parallel Wavefront Computation using MPI.
- * @param[in] argv[1] is the number of processes
- * @param[in] argv[2] is the length of a row (or a column) of the matrix
- * @exception argc < 3
+ * @param[in] argv[0] = the number of processes spawned by MPI
+ * @param[in] argv[1] = the length of a row (or column) of the square matrix.
+ * @param[in] argv[2] = the limit of the chunk_size for the
+ * @param[in] argc = number of cmd arguments.
  */
 int main(int argc, char* argv[]) {
     // Setting base paramters
     int row_length{4096};  // Default length of the square matrix
+    int limit{64};  // Default length of the chunk_limit for parallelize
     int my_rank{0};    int num_processes{0};
 
-    // Initialize MPI and Setting base parameters
+    // Initialize MPI and Setting MPI parameters
     if ( MPI_Init(&argc, &argv) != MPI_SUCCESS) {
         std::cerr<<"in MPI_Init"<<std::endl;
         return EXIT_FAILURE;
@@ -284,30 +187,40 @@ int main(int argc, char* argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
 
     // Checking CMD arguments
-    if (argc == 2)
+    if (argc >= 2)
         row_length = std::stoi(argv[1]);
-    if(!my_rank && (row_length % num_processes)) {
-        std::cerr << "ERROR the row length must be a multiple of the number of processes"
-                  << std::endl;
-        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    }
+    if (argc >= 3)
+        limit = std::stoi(argv[2]);
 
     // Setting up common buffers
     std::vector<double> local_row(row_length, 0.0);
     std::vector<double> local_col(row_length, 0.0);
+    std::vector<int> snd_count(row_length-1, 0.0);
+    std::vector<int> displs(row_length-1, 0.0);
     double local_sum{0.0};
+    DiagInfo diag_info{row_length};
 
-    // Call the appropriate job
-    if (my_rank == 0)
-        MasterJob(my_rank, num_processes, row_length,
-                local_sum, local_row, local_col);
-    else
-        WorkerJob(my_rank, row_length, local_sum,
-                    local_row, local_col);
+    // [ONLY MASTER] Initialize Matrix
+    SquareMtx mtx;
+    // [ONLY EMITTER] Initializing the matrix
+    if(my_rank == MASTER_RANK) {
+        mtx.InitializeMatrix(row_length);
+    }
+
+    // Starting WaveFront Computation
+    WaveFrontComputation(my_rank, num_processes, limit,
+                         row_length,local_sum,
+                         diag_info,
+                         mtx,
+                         local_row,
+                         local_col,
+                         snd_count,
+                         displs);
 
     // Exiting the application
-    MPI_Barrier(MPI_COMM_WORLD);    // TODO RIMUOVERE ALLA FINE
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
 
     return EXIT_SUCCESS;
+
 }

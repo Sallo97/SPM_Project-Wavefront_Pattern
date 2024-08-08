@@ -4,65 +4,8 @@
 #include<ff/ff.hpp>
 #include<ff/farm.hpp>
 #include<thread>
+#include "utils/square_matrix.h"
 
-
-// Struct for our Square Matrix
-// The matrix is initialized as a matrix of size nxn s.t.
-// ∀m in [0, n].mtx[m][m] = (m + 1) / n.
-// All other elements in the matrix are set to 0.
-struct SquareMtx {
-    //Constructor
-    explicit SquareMtx(int row_length)
-        :data(row_length*row_length, 0), row_length(row_length)
-    {
-        for(int m{0}; m < row_length; ++m)
-            data[ (m * row_length) + m ] = static_cast<double>(m + 1)/ static_cast<double>(row_length) ;
-    }
-
-    /**
-        * @brief Return the real index where the cell mtx[row][col]
-        *        is stored.
-        * @param[in] row = the row index of the cell.
-        * @param[in] col = the column index of the cell.
-    */
-    [[nodiscard]] int GetIndex(int row, int col) const {
-        return (row * row_length) + col;
-    }
-
-    /**
-        * @brief Return the value at position mtx[row][col]
-        * @param[in] row = the row index of the cell.
-        * @param[in] col = the column index of the cell.
-    */
-    double GetValue(int row, int col) {
-        return data[GetIndex(row, col)];
-    }
-
-    /**
-        * @brief Does mtx[row][col] = val
-        * @param[in] row = the row index of the cell.
-        * @param[in] col = the column index of the cell.
-        * @param[in] val = the value to set in mtx[row][col]
-    */
-    void SetValue(int row, int col, double val) {
-        data[GetIndex(row, col)] = val;
-    }
-    /**
-        * @brief Prints the matrix
-    */
-    void PrintMtx(){
-        std::cout << "\n";
-        for(int i = 0; i < row_length; ++i) {
-            for(int j = 0; j < row_length; ++j)
-                std::cout << data[GetIndex(i, j)] << " ";
-            std::cout << "\n";
-        }
-    }
-
-    // Parameters
-    std::vector<double> data;
-    int row_length;
-};
 
 /**
  * @brief Represent a task that the Emitter will give to one of

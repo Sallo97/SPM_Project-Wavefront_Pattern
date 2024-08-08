@@ -15,11 +15,10 @@ include_directories(${MPI_INCLUDE_PATH})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
-add_executable(Project #src/main.cpp
-        #src/sequential.cpp
-        #src/parallel_fastflow.cpp
-        #src/parallel_mpi.cpp
-        src/new_parallel_mpi.cpp
+add_executable(Project
+        src/utils/square_matrix.h
+        src/utils/elem_info.h
+        src/sequential.cpp
 )
 
 # Link the MPI library
