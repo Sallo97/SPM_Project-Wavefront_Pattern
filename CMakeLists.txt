@@ -18,7 +18,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 add_executable(Project
         src/utils/square_matrix.h
         src/utils/elem_info.h
-        src/sequential.cpp
+        #src/sequential.cpp
         src/parallel_fastflow.cpp
 )
 

@@ -158,6 +158,7 @@ struct Worker: ff::ff_node_t<Task, int> {
  * @note If no argument is passed, then we assume the matrix has default length
  */
 int main(int argc, char* argv[]) {
+    // Setting matrix length
     u64 mtx_length{default_length};
     if (argc >= 2) // If the user as passed its own lenght
                    // for the matrix use it instead
@@ -166,11 +167,12 @@ int main(int argc, char* argv[]) {
     // Initialize Matrix
     SquareMtx mtx(mtx_length);
 
-    // Setting the Farm
+    // Setting the num of Workers
     u8 num_workers{default_workers};
     if(std::thread::hardware_concurrency() > 0)
        num_workers = std::thread::hardware_concurrency() -1; // One thread is for the Emitter
 
+    // Creating a Farm with Feedback Channels and no Collector
     Emitter emt{mtx, num_workers};
     ff::ff_Farm<> farm(
             [&]() {
@@ -198,7 +200,7 @@ int main(int argc, char* argv[]) {
     const auto end = std::chrono::steady_clock::now();
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-    std::cout << "Time taken for FastFlow version: " << duration.count() << " milliseconds" << std::endl;
+    std::cout << "Time taken for FastFlown version: " << duration.count() << " milliseconds" << std::endl;
     return 0;
 }
 

@@ -84,12 +84,13 @@ inline void ComputeMatrix(SquareMtx& mtx) {
  * @note If no argument is passed, then we assume the matrix has default length
  */
 int main(const int argc, char *argv[]) {
+    // Setting matrix length
     u64 mtx_length = default_length;
     if (argc >= 2) // If the user as passed its own lenght
                    // for the matrix use it instead
         mtx_length = std::stoull(argv[1]);
 
-    // Initialize mtx
+    // Initialize Matrix
     SquareMtx mtx(mtx_length);
 
     // Beginning WaveFront Pattern
