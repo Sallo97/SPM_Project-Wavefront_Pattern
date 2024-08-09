@@ -17,7 +17,6 @@ constexpr u8 default_workers = 4;
  */
 
 struct Task{
-    SquareMtx& mtx;   // Reference to the matrix
     int left_range;           // First element of the diagonal to compute
     int right_range;          // Last element of the diagonal to compute
     int num_diag;             // The upper diagonal where the chunk is
@@ -48,7 +47,7 @@ struct Emitter: ff::ff_monode_t<int, Task> {
     void PrepareNextDiagonal() {
         send_tasks = true;
         curr_diag++;
-        curr_diag_length = mtx.row_length - curr_diag;
+        curr_diag_length = mtx.length - curr_diag;
 
         // Setting Chunk_Size
         chunk_size = (std::ceil(static_cast<float>(curr_diag_length) / num_workers));
@@ -71,7 +70,7 @@ struct Emitter: ff::ff_monode_t<int, Task> {
                                         // have been computed. Starting
                                         // works on the next diagonal.
                 PrepareNextDiagonal();
-                if(curr_diag >= mtx.row_length) {   // All diagonals have been
+                if(curr_diag >= mtx.length) {   // All diagonals have been
                                                     // computed. Closing the farm.
                     eosnotify();
                     return EOS;
@@ -80,8 +79,7 @@ struct Emitter: ff::ff_monode_t<int, Task> {
         }
         if(send_tasks) {     // Sending Task for next diagonal
             for(int i=0; i < curr_diag_length; i += chunk_size) {   // the first element is 0!!!
-                auto* task = new Task{mtx,
-                                      i,
+                auto* task = new Task{i,
                                       i+chunk_size-1,
                                       curr_diag};
                 ff_send_out(task);
@@ -112,6 +110,7 @@ struct Emitter: ff::ff_monode_t<int, Task> {
  *                It represents the number of computed elements.
  */
 struct Worker: ff::ff_node_t<Task, int> {
+    explicit Worker(SquareMtx& mtx) : mtx(mtx) { }
 
     int* svc(Task* t) {
 
@@ -119,7 +118,7 @@ struct Worker: ff::ff_node_t<Task, int> {
         [](int& range, int limit) {
             if(range > limit)
                 range = limit;
-        }(t->right_range, (t->mtx.row_length - t->num_diag) - 1);
+        }(t->right_range, (mtx.length - t->num_diag) - 1);
 
         // Setting parameters
         const int num_elements = t->right_range - t->left_range + 1;
@@ -137,17 +136,20 @@ struct Worker: ff::ff_node_t<Task, int> {
                                                                     // that contains the same elements
                                                                     // Computing the DotProduct
             for(int elem=0; elem < j-i ; ++elem) {
-                temp += t->mtx.GetValue(idx_vecr_row, idx_vecr_col + elem) *
-                                t->mtx.GetValue(idx_vecc_row, idx_vecc_col + elem);
+                temp += mtx.GetValue(idx_vecr_row, idx_vecr_col + elem) *
+                                mtx.GetValue(idx_vecc_row, idx_vecc_col + elem);
             }
 
             // Storing the result
-            t->mtx.SetValue(i, j, std::cbrt(temp));
-            t->mtx.SetValue(j, i, std::cbrt(temp));
+            mtx.SetValue(i, j, std::cbrt(temp));
+            mtx.SetValue(j, i, std::cbrt(temp));
             temp = 0.0; // Resetting temp
         }
         return new int(num_elements);
     }
+
+    // PARAMETERS
+    SquareMtx& mtx; // Reference to the matrix
 };
 
 /**
@@ -178,7 +180,7 @@ int main(int argc, char* argv[]) {
             [&]() {
             std::vector<std::unique_ptr<ff::ff_node>> workers;
             for(size_t i=0; i < num_workers; ++i)
-                workers.push_back(std::make_unique<Worker>());
+                workers.push_back(std::make_unique<Worker>(mtx));
             return workers;
         }(),
         emt);
@@ -201,6 +203,7 @@ int main(int argc, char* argv[]) {
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     std::cout << "Time taken for FastFlown version: " << duration.count() << " milliseconds" << std::endl;
+    mtx.PrintMtx();
     return 0;
 }
 
