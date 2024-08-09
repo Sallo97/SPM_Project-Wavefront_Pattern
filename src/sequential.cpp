@@ -20,9 +20,9 @@ using u64 = std::uint64_t;
 constexpr u64 default_length = 1 << 14;  // it is read as "2^14"
 
 /**
- * @brief Compute the DotProduct Computation for the requested element.
- *        WARNING = it computes also the cube root of the DotProduct
- *                  as requested by the project.
+ * @brief Compute for an element mtx[i][j] the DotProduct of the vectors
+ *        mtx[i][j] = cube_root( DotProd(row[i],col[j]) ).
+ *        The dot product is done on elements already computed
  * @param[in] mtx = the reference to the matrix.
  * @param[in] elem = contains information regarding the element
  *                   that we need to compute.
@@ -30,12 +30,12 @@ constexpr u64 default_length = 1 << 14;  // it is read as "2^14"
  *                         (usually is equal to the diagonal where the elem is from).
  * @param[out] res = where to store the result
 */
-inline void ComputeDotProduct(const SquareMtx& mtx, ElemInfo& elem,
+inline void ComputeElement(const SquareMtx& mtx, ElemInfo& elem,
                        u64 vec_length, double& res) {
-    res = 0.0;  // Reset the result value
-    ElemInfo fst_elem_vec_row{elem.GetVecRowElem()}; // Indexes for the first vector
+    res = 0.0; // Reset the result value
+    const ElemInfo fst_elem_vec_row{elem.GetVecRowElem()}; // Indexes for the first vector
 
-    ElemInfo fst_elem_vec_col{elem.GetVecColElem()}; // Indexes for the second vector
+    const ElemInfo fst_elem_vec_col{elem.GetVecColElem()}; // Indexes for the second vector
                                                      // In reality We do not work with the column vector
                                                      // but with a row in the lower triangular
                                                      // that contains the same elements
@@ -68,7 +68,7 @@ inline void ComputeMatrix(SquareMtx& mtx) {
         for(u64 i = 1; i <= diag_length; ++i) {
             ElemInfo curr_elem{mtx.row_length, num_diag, i};
 
-            ComputeDotProduct(mtx, curr_elem, num_diag, temp);
+            ComputeElement(mtx, curr_elem, num_diag, temp);
 
             // Storing the result
             mtx.SetValue(curr_elem, temp);
@@ -103,6 +103,5 @@ int main(const int argc, char *argv[]) {
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     std::cout << "Time taken for sequential version: " << duration.count() << " milliseconds" << std::endl;
-    mtx.PrintMtx();
     return 0;
 }
