@@ -75,9 +75,10 @@ struct Emitter: ff::ff_monode_t<int, Task> {
             }
         }
         if(send_tasks) {     // Sending Task for next diagonal
-            for(u16 i=0; i < curr_diag_length; i += chunk_size) {   // the first element is 0!!!
+                             // Elements start at 1
+            for(u16 i=1; i <= curr_diag_length; i += chunk_size) {   // the first element is 0!!!
                 auto* task = new Task{i,
-                                      i+chunk_size-1,
+                                      i+chunk_size - 1,
                                       curr_diag};
                 ff_send_out(task);
             }
@@ -143,11 +144,10 @@ struct Worker: ff::ff_node_t<Task, int> {
         // Checking that the last element isn't out of bounds
         // In case correct it
         [](u16& range, u16 limit) {
-            if(range > limit)
+            if(range >= limit)
                 range = limit;
-        }(t->last_elem, (mtx.length - t->num_diag) - 1);
+        }(t->last_elem, (mtx.length - t->num_diag) );
 
-        t->first_elem++;    t->last_elem++;   //TODO HOTFIX, SISTEMARE NELL'EMITTER
 
         // Setting parameters
         const int diag_length = t->last_elem - t->first_elem + 1;
@@ -169,7 +169,7 @@ struct Worker: ff::ff_node_t<Task, int> {
             mtx.SetValue(curr_elem.col, curr_elem.row, temp);
         }
 
-        // // Starting the computation of elements
+        // [OLD] Starting the computation of elements
         // for(int k = 0; k < diag_length; ++k) {
         //     int i = t->first_elem + k; int j = t->num_diag + k + t->first_elem;
         //
