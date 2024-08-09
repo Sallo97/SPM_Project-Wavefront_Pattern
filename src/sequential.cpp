@@ -59,14 +59,14 @@ inline void ComputeElement(SquareMtx& mtx, ElemInfo& elem,
 inline void ComputeMatrix(SquareMtx& mtx) {
     double temp{0.0}; // Stores the results of
                       // the DotProduct computations.
-    u64 diag_length{mtx.row_length};    // Stores the number of elements
+    u64 diag_length{mtx.length};    // Stores the number of elements
                                         // in each diagonal
 
-    for (u64 num_diag = 1; num_diag < mtx.row_length; ++num_diag) { // We assume the major diagonal has number 0
+    for (u64 num_diag = 1; num_diag < mtx.length; ++num_diag) { // We assume the major diagonal has number 0
         diag_length--;
 
         for(u64 i = 1; i <= diag_length; ++i) {
-            ElemInfo curr_elem{mtx.row_length, num_diag, i};
+            ElemInfo curr_elem{mtx.length, num_diag, i};
 
             ComputeElement(mtx, curr_elem, num_diag, temp);
 
