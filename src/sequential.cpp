@@ -10,42 +10,12 @@
  * @author Salvatore Salerno
  */
 
-#include <cmath>
 #include <iostream>
 #include <vector>
 #include "utils/square_matrix.h"
 #include "utils/elem_info.h"
 #include "utils/constants.h"
-
-/**
- * @brief Compute for an element mtx[i][j] the DotProduct of the vectors
- *        mtx[i][j] = cube_root( DotProd(row[i],col[j]) ).
- *        The dot product is done on elements already computed
- * @param[in] mtx = the reference to the matrix.
- * @param[in] elem = contains information regarding the element
- *                   that we need to compute.
- * @param[in] vec_length = the length of the vectors of the DotProduct
- *                         (usually is equal to the diagonal where the elem is from).
- * @param[out] res = where to store the result
-*/
-inline void ComputeElement(SquareMtx& mtx, ElemInfo& elem,
-                       u16& vec_length, double& res) {
-    res = 0.0; // Reset the result value
-    const ElemInfo fst_elem_vec_row{elem.GetVecRowElem()}; // Indexes for the first vector
-
-    const ElemInfo fst_elem_vec_col{elem.GetVecColElem()}; // Indexes for the second vector
-                                                           // In reality We do not work with the column vector
-                                                           // but with a row in the lower triangular
-                                                           // that contains the same elements
-
-    // Starting the DotProduct Computation
-    for(u16 i = 0; i < vec_length; ++i)
-        res += mtx.GetValue(fst_elem_vec_row.row, fst_elem_vec_row.col + i)
-                * mtx.GetValue(fst_elem_vec_col.row, fst_elem_vec_col.col + i);
-
-    // Storing the cuberoot of the final result
-    res = std::cbrt(res);
-}
+#include "utils/compute_elem.h"
 
 /**
  * @brief Apply the WaveFront Computation.
