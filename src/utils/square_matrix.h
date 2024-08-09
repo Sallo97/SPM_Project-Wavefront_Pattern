@@ -10,7 +10,7 @@
 
 #include "elem_info.h"
 
-using uint64= std::uint64_t;
+using u64= std::uint64_t;
 
 // Struct for our Square Matrix
 // The matrix is initialized as a matrix of size nxn s.t.
@@ -18,10 +18,10 @@ using uint64= std::uint64_t;
 // All other elements in the matrix are set to 0.
 struct SquareMtx {
     //Constructor
-    SquareMtx(){row_length = -1;}
+    SquareMtx(){length = -1;}
 
-    explicit SquareMtx(uint64 row_length)
-        :data(row_length*row_length, 0), row_length(row_length) {
+    explicit SquareMtx(u64 length)
+        :data(length*length, 0), length(length) {
         InitializeMatrix();
     }
 
@@ -31,8 +31,8 @@ struct SquareMtx {
         * @param[in] row = the row index of the cell.
         * @param[in] col = the column index of the cell.
     */
-    [[nodiscard]] uint64 GetIndex(uint64 row, uint64 col) const {
-        return (row * row_length) + col;
+    [[nodiscard]] u64 GetIndex(u64 row, u64 col) const {
+        return (row * length) + col;
     }
 
     /**
@@ -40,28 +40,28 @@ struct SquareMtx {
         *        is stored.
         * @param[in] elem = an ElemInfo object.
     */
-    [[nodiscard]] uint64 GetIndex(ElemInfo elem) const {
-        return (elem.row * row_length) + elem.col;
+    [[nodiscard]] u64 GetIndex(ElemInfo elem) const {
+        return (elem.row * length) + elem.col;
     }
 
     /**
         * @brief Initialize the matrix with the length it has.
     */
     void InitializeMatrix() {
-        if(row_length == -1)
-            std::cerr << "ERROR!!! row_length not set";
+        if(length == -1)
+            std::cerr << "ERROR!!! length not set";
 
-        for(uint64 m{0}; m < row_length; ++m)
-            data[ (m * row_length) + m ] = static_cast<double>(m + 1)/ static_cast<double>(row_length) ;
+        for(u64 m{0}; m < length; ++m)
+            data[ (m * length) + m ] = static_cast<double>(m + 1)/ static_cast<double>(length) ;
     }
 
     /**
         * @brief Initialize the matrix with the given length
-        * @param[in] val = the new value of the row_length
+        * @param[in] val = the new value of the length
     */
-    void InitializeMatrix(uint64 val) {
-        if(row_length == -1) {
-            row_length = val;
+    void InitializeMatrix(u64 val) {
+        if(length == -1) {
+            length = val;
             InitializeMatrix();
         }
         else if (val <= 0)
@@ -76,7 +76,7 @@ struct SquareMtx {
         * @param[in] row = the row index of the cell.
         * @param[in] col = the column index of the cell.
     */
-    [[nodiscard]] double GetValue(uint64 row, uint64 col) const {
+    [[nodiscard]] double GetValue(u64 row, u64 col) const {
         return data[GetIndex(row, col)];
     }
 
@@ -86,7 +86,7 @@ struct SquareMtx {
         * @param[in] col = the column index of the cell.
         * @param[in] val = the value to set in mtx[row][col]
     */
-    void SetValue(uint64 row, uint64 col, double val) {
+    void SetValue(u64 row, u64 col, double val) {
         data[GetIndex(row, col)] = val;
     }
 
@@ -105,18 +105,18 @@ struct SquareMtx {
         * @brief Prints the whole matrix
     */
     void PrintMtx() const{
-        if(row_length == -1) {
+        if(length == -1) {
             std::cerr << "ERROR!!! Matrix not yet initialized" << std::endl;
             return;
         }
-        if (row_length > 100) {
+        if (length > 100) {
             std::cerr << "ERROR!!! The matrix is too big to print" << std::endl;
             return;
         }
 
         std::cout << "\n";
-        for(uint64 i = 0; i < row_length; ++i) {
-            for(uint64 j = 0; j < row_length; ++j)
+        for(u64 i = 0; i < length; ++i) {
+            for(u64 j = 0; j < length; ++j)
                 std::cout << data[GetIndex(i, j)] << " ";
             std::cout << "\n";
         }
@@ -127,13 +127,13 @@ struct SquareMtx {
         *        s.t. ∀ mtx[i][j] = j
     */
     void FillMatrix() {
-        for(uint64 i = 0; i < row_length; ++i)
-            for (uint64 j = 0; j < row_length; ++j)
+        for(u64 i = 0; i < length; ++i)
+            for (u64 j = 0; j < length; ++j)
                 SetValue(i, j, static_cast<double>(j));
     }
 
     // Parameters
     std::vector<double> data;
-    uint64 row_length;
+    u64 length;
 };
 #endif //SQUARE_MATRIX_H
