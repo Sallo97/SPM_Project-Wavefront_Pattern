@@ -121,11 +121,11 @@ struct Worker: ff::ff_node_t<Task, int> {
         }(t->right_range, (mtx.length - t->num_diag) - 1);
 
         // Setting parameters
-        const int num_elements = t->right_range - t->left_range + 1;
-        double temp{0.0};
+        const int diag_length = t->right_range - t->left_range + 1;
+        temp = 0.0; // Resetting temp
 
         // Starting the computation of elements
-        for(int k = 0; k < num_elements; ++k) {
+        for(int k = 0; k < diag_length; ++k) {
             int i = t->left_range + k; int j = t->num_diag + k + t->left_range;
 
             //Setting parameters for DotProduct
@@ -145,11 +145,13 @@ struct Worker: ff::ff_node_t<Task, int> {
             mtx.SetValue(j, i, std::cbrt(temp));
             temp = 0.0; // Resetting temp
         }
-        return new int(num_elements);
+        return new int(diag_length);
     }
 
     // PARAMETERS
     SquareMtx& mtx; // Reference to the matrix
+    double temp{0.0}; // Stores the results of
+                      // the computaton of an Element
 };
 
 /**
@@ -166,13 +168,16 @@ int main(int argc, char* argv[]) {
                    // for the matrix use it instead
         mtx_length = std::stoull(argv[1]);
 
-    // Initialize Matrix
-    SquareMtx mtx(mtx_length);
-
     // Setting the num of Workers
     u8 num_workers{default_workers};
     if(std::thread::hardware_concurrency() > 0)
        num_workers = std::thread::hardware_concurrency() -1; // One thread is for the Emitter
+    if (argc >=3)   // If the user passed its own num of
+                    // Workers use it instead
+        num_workers = std::stoul(argv[2]);
+
+    // Initialize Matrix
+    SquareMtx mtx(mtx_length);
 
     // Creating a Farm with Feedback Channels and no Collector
     Emitter emt{mtx, num_workers};
@@ -203,7 +208,6 @@ int main(int argc, char* argv[]) {
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     std::cout << "Time taken for FastFlown version: " << duration.count() << " milliseconds" << std::endl;
-    mtx.PrintMtx();
     return 0;
 }
 
