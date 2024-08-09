@@ -5,11 +5,7 @@
 #include<ff/farm.hpp>
 #include<thread>
 #include "utils/square_matrix.h"
-
-using u64 = std::uint64_t;
-using u8 = std::uint8_t;
-constexpr u64 default_length = 1 << 14;  // it is read as "2^14"
-constexpr u8 default_workers = 4;
+#include "utils/constants.h"
 
 /**
  * @brief Represent a task that the Emitter will give to one of
@@ -17,9 +13,9 @@ constexpr u8 default_workers = 4;
  */
 
 struct Task{
-    int left_range;           // First element of the diagonal to compute
-    int right_range;          // Last element of the diagonal to compute
-    int num_diag;             // The upper diagonal where the chunk is
+    u16 left_range;           // First element of the diagonal to compute
+    u16 right_range;          // Last element of the diagonal to compute
+    u16 num_diag;             // The upper diagonal where the chunk is
 };
 
 /**
@@ -50,9 +46,9 @@ struct Emitter: ff::ff_monode_t<int, Task> {
         curr_diag_length = mtx.length - curr_diag;
 
         // Setting Chunk_Size
-        chunk_size = (std::ceil(static_cast<float>(curr_diag_length) / num_workers));
-        if (chunk_size > 64)    // Like Super Mario hihihi
-            chunk_size = 64;
+        chunk_size = static_cast<u16>( (std::ceill(static_cast<float>(curr_diag_length) / num_workers)) );
+        if (chunk_size > default_chunk_size)
+            chunk_size = default_chunk_size;
     }
 
     /**
@@ -78,7 +74,7 @@ struct Emitter: ff::ff_monode_t<int, Task> {
             }
         }
         if(send_tasks) {     // Sending Task for next diagonal
-            for(int i=0; i < curr_diag_length; i += chunk_size) {   // the first element is 0!!!
+            for(u16 i=0; i < curr_diag_length; i += chunk_size) {   // the first element is 0!!!
                 auto* task = new Task{i,
                                       i+chunk_size-1,
                                       curr_diag};
@@ -92,10 +88,10 @@ struct Emitter: ff::ff_monode_t<int, Task> {
 
     // Parameters
     SquareMtx& mtx;   // Reference to the matrix to compute.
-    int curr_diag{0};           // The current diagonal.
-    int curr_diag_length{0};    // Number of elements of the curr. diagonal.
-    int chunk_size{0};          // Number of elements per Worker.
-    int num_workers{0};         // Number of workers employed by the farm.
+    u16 curr_diag{0};           // The current diagonal.
+    u16 curr_diag_length{0};    // Number of elements of the curr. diagonal.
+    u16 chunk_size{0};          // Number of elements per Worker.
+    u8 num_workers{0};         // Number of workers employed by the farm.
     bool send_tasks{false};            // Tells if we have to send tasks to Workers.
 };
 
@@ -115,7 +111,7 @@ struct Worker: ff::ff_node_t<Task, int> {
     int* svc(Task* t) {
 
         // Checking that the last element isn't out of bounds
-        [](int& range, int limit) {
+        [](u16& range, u16 limit) {
             if(range > limit)
                 range = limit;
         }(t->right_range, (mtx.length - t->num_diag) - 1);
@@ -163,7 +159,7 @@ struct Worker: ff::ff_node_t<Task, int> {
  */
 int main(int argc, char* argv[]) {
     // Setting matrix length
-    u64 mtx_length{default_length};
+    u16 mtx_length{default_length};
     if (argc >= 2) // If the user as passed its own lenght
                    // for the matrix use it instead
         mtx_length = std::stoull(argv[1]);
@@ -175,6 +171,9 @@ int main(int argc, char* argv[]) {
     if (argc >=3)   // If the user passed its own num of
                     // Workers use it instead
         num_workers = std::stoul(argv[2]);
+    std::cout << "num_workers = " << static_cast<int>(num_workers) << "\n"
+              << "mtx_length = " << mtx_length << std::endl;
+
 
     // Initialize Matrix
     SquareMtx mtx(mtx_length);
