@@ -15,9 +15,7 @@
 #include <vector>
 #include "utils/square_matrix.h"
 #include "utils/elem_info.h"
-
-using u64 = std::uint64_t;
-constexpr u64 default_length = 1 << 14;  // it is read as "2^14"
+#include "utils/constants.h"
 
 /**
  * @brief Compute for an element mtx[i][j] the DotProduct of the vectors
@@ -31,7 +29,7 @@ constexpr u64 default_length = 1 << 14;  // it is read as "2^14"
  * @param[out] res = where to store the result
 */
 inline void ComputeElement(SquareMtx& mtx, ElemInfo& elem,
-                       u64& vec_length, double& res) {
+                       u16& vec_length, double& res) {
     res = 0.0; // Reset the result value
     const ElemInfo fst_elem_vec_row{elem.GetVecRowElem()}; // Indexes for the first vector
 
@@ -41,7 +39,7 @@ inline void ComputeElement(SquareMtx& mtx, ElemInfo& elem,
                                                            // that contains the same elements
 
     // Starting the DotProduct Computation
-    for(u64 i = 0; i < vec_length; ++i)
+    for(u16 i = 0; i < vec_length; ++i)
         res += mtx.GetValue(fst_elem_vec_row.row, fst_elem_vec_row.col + i)
                 * mtx.GetValue(fst_elem_vec_col.row, fst_elem_vec_col.col + i);
 
@@ -59,13 +57,13 @@ inline void ComputeElement(SquareMtx& mtx, ElemInfo& elem,
 inline void ComputeMatrix(SquareMtx& mtx) {
     double temp{0.0}; // Stores the results of
                       // the DotProduct computations.
-    u64 diag_length{mtx.length};    // Stores the number of elements
+    u16 diag_length{mtx.length};    // Stores the number of elements
                                         // in each diagonal
 
-    for (u64 num_diag = 1; num_diag < mtx.length; ++num_diag) { // We assume the major diagonal has number 0
+    for (u16 num_diag = 1; num_diag < mtx.length; ++num_diag) { // We assume the major diagonal has number 0
         diag_length--;
 
-        for(u64 i = 1; i <= diag_length; ++i) {
+        for(u16 i = 1; i <= diag_length; ++i) {
             ElemInfo curr_elem{mtx.length, num_diag, i};
 
             ComputeElement(mtx, curr_elem, num_diag, temp);
@@ -85,7 +83,7 @@ inline void ComputeMatrix(SquareMtx& mtx) {
  */
 int main(const int argc, char *argv[]) {
     // Setting matrix length
-    u64 mtx_length = default_length;
+    u16 mtx_length = default_length;
     if (argc >= 2) // If the user as passed its own lenght
                    // for the matrix use it instead
         mtx_length = std::stoull(argv[1]);
@@ -104,5 +102,6 @@ int main(const int argc, char *argv[]) {
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     std::cout << "Time taken for sequential version: " << duration.count() << " milliseconds" << std::endl;
+    mtx.PrintMtx();
     return 0;
 }
