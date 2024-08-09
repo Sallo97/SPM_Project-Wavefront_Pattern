@@ -30,15 +30,15 @@ constexpr u64 default_length = 1 << 14;  // it is read as "2^14"
  *                         (usually is equal to the diagonal where the elem is from).
  * @param[out] res = where to store the result
 */
-inline void ComputeElement(const SquareMtx& mtx, ElemInfo& elem,
-                       u64 vec_length, double& res) {
+inline void ComputeElement(SquareMtx& mtx, ElemInfo& elem,
+                       u64& vec_length, double& res) {
     res = 0.0; // Reset the result value
     const ElemInfo fst_elem_vec_row{elem.GetVecRowElem()}; // Indexes for the first vector
 
     const ElemInfo fst_elem_vec_col{elem.GetVecColElem()}; // Indexes for the second vector
-                                                     // In reality We do not work with the column vector
-                                                     // but with a row in the lower triangular
-                                                     // that contains the same elements
+                                                           // In reality We do not work with the column vector
+                                                           // but with a row in the lower triangular
+                                                           // that contains the same elements
 
     // Starting the DotProduct Computation
     for(u64 i = 0; i < vec_length; ++i)
