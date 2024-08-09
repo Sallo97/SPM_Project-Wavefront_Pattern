@@ -19,6 +19,7 @@ add_executable(Project
         src/utils/square_matrix.h
         src/utils/elem_info.h
         src/sequential.cpp
+        src/parallel_fastflow.cpp
 )
 
 # Link the MPI library

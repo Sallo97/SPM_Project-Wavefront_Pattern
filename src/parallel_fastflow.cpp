@@ -6,6 +6,10 @@
 #include<thread>
 #include "utils/square_matrix.h"
 
+using u64 = std::uint64_t;
+using u8 = std::uint8_t;
+constexpr u64 default_length = 1 << 14;  // it is read as "2^14"
+constexpr u8 default_workers = 4;
 
 /**
  * @brief Represent a task that the Emitter will give to one of
@@ -147,46 +151,29 @@ struct Worker: ff::ff_node_t<Task, int> {
 };
 
 /**
- * @brief Determines the number of workers of the farm by determining
- *        the affinity of the hardware
- * @param[in] def = default value
- */
-int DetermineWorkers(int def) {
-    if(std::thread::hardware_concurrency() > 0)
-        return std::thread::hardware_concurrency() -1; // One thread is for the Emitter
-    return def;
-}
-
-/**
  * @brief A Parallel Wavefront Computation using the library FastFlow.
  *        It uses a Farm with Feedback Channels.
  * @param[in] argv[1] is the length a row (or a column) of the matrix
- * @exception argc < 3
+ * @param[in] argc = the number of cmd arguments.
+ * @note If no argument is passed, then we assume the matrix has default length
  */
 int main(int argc, char* argv[]) {
-    // Setting length row/column matrix
-    if(argc!=2) {
-        std::cerr << "You must pass as argument the length of the square matrix to generate"
-                  << std::endl;
-        return -1;
-    }
-    if (std::stoll(argv[1]) <= 0) {
-        std::cerr << "Invalid length! The lenght must be a positive integer != 0"
-                  << std::endl;
-        return -1;
-    }
-    const int n{static_cast<int>(std::stoll(argv[1]))};
+    u64 mtx_length{default_length};
+    if (argc >= 2) // If the user as passed its own lenght
+                   // for the matrix use it instead
+        mtx_length = std::stoull(argv[1]);
+
     // Initialize Matrix
-    SquareMtx mtx(n);
+    SquareMtx mtx(mtx_length);
 
-    // Setting number of workers
-    int num_workers = DetermineWorkers(6);
+    // Setting the Farm
+    u8 num_workers{default_workers};
+    if(std::thread::hardware_concurrency() > 0)
+       num_workers = std::thread::hardware_concurrency() -1; // One thread is for the Emitter
 
-
-    // Creating the Farm
     Emitter emt{mtx, num_workers};
     ff::ff_Farm<> farm(
-        [&]() {
+            [&]() {
             std::vector<std::unique_ptr<ff::ff_node>> workers;
             for(size_t i=0; i < num_workers; ++i)
                 workers.push_back(std::make_unique<Worker>());
@@ -201,17 +188,17 @@ int main(int argc, char* argv[]) {
 
     // If we have a 1x1 matrix, then we do not need
     // to apply the computation
-    if (n > 1) {
+    if (mtx_length > 1) {
         if(farm.run_and_wait_end()<0) {
-            std::cerr<<"While running farm";
+            std::cerr<<"ERROR!!! An error occurred while running the farm";
             return -1;
         }
     }
 
     const auto end = std::chrono::steady_clock::now();
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Time taken for parallel version: " << duration.count() << " milliseconds" << std::endl;
 
+    std::cout << "Time taken for FastFlow version: " << duration.count() << " milliseconds" << std::endl;
     return 0;
 }
 
