@@ -6,6 +6,7 @@
 #include<thread>
 #include "utils/square_matrix.h"
 #include "utils/constants.h"
+#include "utils/compute_elem.h"
 
 /**
  * @brief Represent a task that the Emitter will give to one of
@@ -98,36 +99,6 @@ struct Emitter: ff::ff_monode_t<int, Task> {
 };
 
 /**
- * @brief Compute for an element mtx[i][j] the DotProduct of the vectors
- *        mtx[i][j] = cube_root( DotProd(row[i],col[j]) ).
- *        The dot product is done on elements already computed
- * @param[in] mtx = the reference to the matrix.
- * @param[in] elem = contains information regarding the element
- *                   that we need to compute.
- * @param[in] vec_length = the length of the vectors of the DotProduct
- *                         (usually is equal to the diagonal where the elem is from).
- * @param[out] res = where to store the result
-*/
-inline void ComputeElement(SquareMtx& mtx, ElemInfo& elem,
-                       u16& vec_length, double& res) {
-    res = 0.0; // Reset the result value
-    const ElemInfo fst_elem_vec_row{elem.GetVecRowElem()}; // Indexes for the first vector
-
-    const ElemInfo fst_elem_vec_col{elem.GetVecColElem()}; // Indexes for the second vector
-    // In reality We do not work with the column vector
-    // but with a row in the lower triangular
-    // that contains the same elements
-
-    // Starting the DotProduct Computation
-    for(u16 i = 0; i < vec_length; ++i)
-        res += mtx.GetValue(fst_elem_vec_row.row, fst_elem_vec_row.col + i)
-                * mtx.GetValue(fst_elem_vec_col.row, fst_elem_vec_col.col + i);
-
-    // Storing the cuberoot of the final result
-    res = std::cbrt(res);
-}
-
-/**
  * @brief Receive from the Emitter the task to compute.
  *        A task gives information to the elements of the
  *        matrix the Worker needs to compute. After it computes
@@ -151,13 +122,7 @@ struct Worker: ff::ff_node_t<Task, int> {
 
         // Setting parameters
         const int diag_length = t->last_elem - t->first_elem + 1;
-        temp = 0.0; // Resetting temp
-
-        std::cout   << "num_diag = " << t->num_diag
-                    << " first_elem = " << t->first_elem
-                    << " last_elem = " << t->last_elem << std::endl;
-
-
+w
         // // Starting computations of elements
         for(u16 num_elem = t->first_elem; num_elem <= t->last_elem; ++num_elem)    //TODO POSSIBILE ERRORE QUI SUL <=
         {
@@ -169,27 +134,6 @@ struct Worker: ff::ff_node_t<Task, int> {
             mtx.SetValue(curr_elem.col, curr_elem.row, temp);
         }
 
-        // [OLD] Starting the computation of elements
-        // for(int k = 0; k < diag_length; ++k) {
-        //     int i = t->first_elem + k; int j = t->num_diag + k + t->first_elem;
-        //
-        //     //Setting parameters for DotProduct
-        //     const int idx_vecr_row = i;  int idx_vecr_col = i;      // Indexes for the first vector
-        //     const int idx_vecc_row = j;  int idx_vecc_col = i + 1;  // Indexes for the second vector
-        //                                                             // We do not work with the column vector
-        //                                                             // but with a row in the lower triangular
-        //                                                             // that contains the same elements
-        //                                                             // Computing the DotProduct
-        //     for(int elem=0; elem < j-i ; ++elem) {
-        //         temp += mtx.GetValue(idx_vecr_row, idx_vecr_col + elem) *
-        //                         mtx.GetValue(idx_vecc_row, idx_vecc_col + elem);
-        //     }
-        //
-        //     // Storing the result
-        //     mtx.SetValue(i, j, std::cbrt(temp));
-        //     mtx.SetValue(j, i, std::cbrt(temp));
-        //     temp = 0.0; // Resetting temp
-        // }
         return new int(diag_length);
     }
 
@@ -220,9 +164,6 @@ int main(int argc, char* argv[]) {
     if (argc >=3)   // If the user passed its own num of
                     // Workers use it instead
         num_workers = std::stoul(argv[2]);
-    std::cout << "num_workers = " << static_cast<int>(num_workers) << "\n"
-              << "mtx_length = " << mtx_length << std::endl;
-
 
     // Initialize Matrix
     SquareMtx mtx(mtx_length);
