@@ -13,9 +13,10 @@
  */
 
 struct Task{
-    u16 left_range;           // First element of the diagonal to compute
-    u16 right_range;          // Last element of the diagonal to compute
-    u16 num_diag;             // The upper diagonal where the chunk is
+    u16 first_elem;           // First element of the range of elements to compute
+    u16 last_elem;            // Last element of the range of elements to compute
+    u16 num_diag;             // The upper diagonal where the elements are
+                              // We assume that the major diagonal has value 0
 };
 
 /**
@@ -95,6 +96,35 @@ struct Emitter: ff::ff_monode_t<int, Task> {
     bool send_tasks{false};            // Tells if we have to send tasks to Workers.
 };
 
+/**
+ * @brief Compute for an element mtx[i][j] the DotProduct of the vectors
+ *        mtx[i][j] = cube_root( DotProd(row[i],col[j]) ).
+ *        The dot product is done on elements already computed
+ * @param[in] mtx = the reference to the matrix.
+ * @param[in] elem = contains information regarding the element
+ *                   that we need to compute.
+ * @param[in] vec_length = the length of the vectors of the DotProduct
+ *                         (usually is equal to the diagonal where the elem is from).
+ * @param[out] res = where to store the result
+*/
+inline void ComputeElement(SquareMtx& mtx, ElemInfo& elem,
+                       u16& vec_length, double& res) {
+    res = 0.0; // Reset the result value
+    const ElemInfo fst_elem_vec_row{elem.GetVecRowElem()}; // Indexes for the first vector
+
+    const ElemInfo fst_elem_vec_col{elem.GetVecColElem()}; // Indexes for the second vector
+    // In reality We do not work with the column vector
+    // but with a row in the lower triangular
+    // that contains the same elements
+
+    // Starting the DotProduct Computation
+    for(u16 i = 0; i < vec_length; ++i)
+        res += mtx.GetValue(fst_elem_vec_row.row, fst_elem_vec_row.col + i)
+                * mtx.GetValue(fst_elem_vec_col.row, fst_elem_vec_col.col + i);
+
+    // Storing the cuberoot of the final result
+    res = std::cbrt(res);
+}
 
 /**
  * @brief Receive from the Emitter the task to compute.
@@ -111,36 +141,55 @@ struct Worker: ff::ff_node_t<Task, int> {
     int* svc(Task* t) {
 
         // Checking that the last element isn't out of bounds
+        // In case correct it
         [](u16& range, u16 limit) {
             if(range > limit)
                 range = limit;
-        }(t->right_range, (mtx.length - t->num_diag) - 1);
+        }(t->last_elem, (mtx.length - t->num_diag) - 1);
+
+        t->first_elem++;    t->last_elem++;   //TODO HOTFIX, SISTEMARE NELL'EMITTER
 
         // Setting parameters
-        const int diag_length = t->right_range - t->left_range + 1;
+        const int diag_length = t->last_elem - t->first_elem + 1;
         temp = 0.0; // Resetting temp
 
-        // Starting the computation of elements
-        for(int k = 0; k < diag_length; ++k) {
-            int i = t->left_range + k; int j = t->num_diag + k + t->left_range;
+        std::cout   << "num_diag = " << t->num_diag
+                    << " first_elem = " << t->first_elem
+                    << " last_elem = " << t->last_elem << std::endl;
 
-            //Setting parameters for DotProduct
-            const int idx_vecr_row = i;  int idx_vecr_col = i;      // Indexes for the first vector
-            const int idx_vecc_row = j;  int idx_vecc_col = i + 1;  // Indexes for the second vector
-                                                                    // We do not work with the column vector
-                                                                    // but with a row in the lower triangular
-                                                                    // that contains the same elements
-                                                                    // Computing the DotProduct
-            for(int elem=0; elem < j-i ; ++elem) {
-                temp += mtx.GetValue(idx_vecr_row, idx_vecr_col + elem) *
-                                mtx.GetValue(idx_vecc_row, idx_vecc_col + elem);
-            }
+
+        // // Starting computations of elements
+        for(u16 num_elem = t->first_elem; num_elem <= t->last_elem; ++num_elem)    //TODO POSSIBILE ERRORE QUI SUL <=
+        {
+            ElemInfo curr_elem{mtx.length, t->num_diag, num_elem};
+            ComputeElement(mtx, curr_elem, t->num_diag, temp);
 
             // Storing the result
-            mtx.SetValue(i, j, std::cbrt(temp));
-            mtx.SetValue(j, i, std::cbrt(temp));
-            temp = 0.0; // Resetting temp
+            mtx.SetValue(curr_elem, temp);
+            mtx.SetValue(curr_elem.col, curr_elem.row, temp);
         }
+
+        // // Starting the computation of elements
+        // for(int k = 0; k < diag_length; ++k) {
+        //     int i = t->first_elem + k; int j = t->num_diag + k + t->first_elem;
+        //
+        //     //Setting parameters for DotProduct
+        //     const int idx_vecr_row = i;  int idx_vecr_col = i;      // Indexes for the first vector
+        //     const int idx_vecc_row = j;  int idx_vecc_col = i + 1;  // Indexes for the second vector
+        //                                                             // We do not work with the column vector
+        //                                                             // but with a row in the lower triangular
+        //                                                             // that contains the same elements
+        //                                                             // Computing the DotProduct
+        //     for(int elem=0; elem < j-i ; ++elem) {
+        //         temp += mtx.GetValue(idx_vecr_row, idx_vecr_col + elem) *
+        //                         mtx.GetValue(idx_vecc_row, idx_vecc_col + elem);
+        //     }
+        //
+        //     // Storing the result
+        //     mtx.SetValue(i, j, std::cbrt(temp));
+        //     mtx.SetValue(j, i, std::cbrt(temp));
+        //     temp = 0.0; // Resetting temp
+        // }
         return new int(diag_length);
     }
 
@@ -207,6 +256,7 @@ int main(int argc, char* argv[]) {
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     std::cout << "Time taken for FastFlown version: " << duration.count() << " milliseconds" << std::endl;
+    mtx.PrintMtx();
     return 0;
 }
 
