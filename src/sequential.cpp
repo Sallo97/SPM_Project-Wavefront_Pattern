@@ -10,6 +10,7 @@
  * @author Salvatore Salerno
  */
 
+#include <chrono>
 #include <iostream>
 #include <vector>
 #include "utils/square_matrix.h"

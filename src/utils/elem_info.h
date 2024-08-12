@@ -5,7 +5,8 @@
 #ifndef ELEM_INFO_H
 #define ELEM_INFO_H
 
-using uint64 = std::uint64_t;
+#include "constants.h"
+
 
 struct ElemInfo {
   /**
@@ -13,7 +14,7 @@ struct ElemInfo {
     * @param[in] row = the row of the element
     * @param[in] col = the col. of the element
  */
-  ElemInfo(uint64 row = 0, uint64 col = 0)
+  ElemInfo(u16 row = 0, u16 col = 0)
     :row(row), col(col){ }
 
   /**
@@ -24,7 +25,7 @@ struct ElemInfo {
     * @param[in] num_elem = the position of the element in the diagonal
     *                       (we assume the first element has position 1)
   */
-  ElemInfo(uint64 mtx_length, uint64 num_diag, uint64 num_elem) {
+  ElemInfo(u16 mtx_length, u16 num_diag, u16 num_elem) {
     if(mtx_length <= num_diag) {
       std::cerr << "ERROR!!! The element is not in an upper diagonal" << std::endl;
       return;
@@ -58,10 +59,10 @@ struct ElemInfo {
     if(row > col) {
       std::cerr << "ERROR!!! The current element is not in an upper diagonal" << std::endl;
     }
-    return ElemInfo{col, row + 1};
+    return ElemInfo{col, static_cast<u16> (row + 1)};
   }
   //PARAMETERS
-  uint64 row{0};
-  uint64 col{0};
+  u16 row{0};
+  u16 col{0};
 };
 #endif //ELEM_INFO_H

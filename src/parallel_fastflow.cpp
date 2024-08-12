@@ -22,31 +22,26 @@
 #include "utils/constants.h"
 #include "utils/compute_elem.h"
 #include "utils/elem_info.h"
+#include "utils/ff_send_info.h"
+#include "utils/ff_task.h"
+
 
 /**
  * @brief Represent a task that the Emitter will give to one of
  *        its Workers.
  */
 
-struct Task{
-    u16 first_elem;           // First element of the range of elements to compute
-    u16 last_elem;            // Last element of the range of elements to compute
-    u16 num_diag;             // The upper diagonal where the elements are
-                              // We assume that the major diagonal has value 0
-};
-
 /**
  * @brief Computes a given chunks of elements of the matrix
  *        following the Wavefront Computation
  * @param[out] mtx = reference of the matrix where compute the elements
- * @param[in] first_elem = reference to the number of the first element in the chunk
- * @param[in] last_elem = reference to the number of the last element in the chunk
+ * @param[in] start_range = reference to the number of the first element in the chunk
+ * @param[in] end_range = reference to the number of the last element in the chunk
  * @param[in] num_diag = reference to the diagonal where the elements are stored
 */
-inline void ComputeChunk(SquareMtx& mtx, u16& first_elem,
-                         u16& last_elem, u16& num_diag) {
+inline void ComputeChunk(SquareMtx& mtx, const u16& start_range, const u16& end_range, const u16& num_diag) {
     double temp{0.0};
-    for(u16 num_elem = first_elem; num_elem <= last_elem; ++num_elem)
+    for(u16 num_elem = start_range; num_elem <= end_range; ++num_elem)
     {
         ElemInfo curr_elem{mtx.length, num_diag, num_elem};
         ComputeElement(mtx, curr_elem, num_diag, temp);
@@ -56,39 +51,6 @@ inline void ComputeChunk(SquareMtx& mtx, u16& first_elem,
         mtx.SetValue(curr_elem.col, curr_elem.row, temp);
     }
 }
-
-/**
- * @brief Contains informations for the Emitter regarding
- *        when and what diagonal to send to the Workers
- */
-struct SendInfo {
-    SendInfo(const u16 num_workers, const u16 base_lenght)
-    : diag_length(base_lenght), num_workers(num_workers) {PrepareNextDiagonal();}
-
-    /**
-    * @brief This method prepare all parameters of the Emitter for computing
-    *        the elements of the next diagonal of the matrix.
-    */
-    void PrepareNextDiagonal() {
-        send_tasks = true;
-        diag++;
-        diag_length--;
-        computed_elements = diag_length;
-
-        // Setting Chunk_Size
-        chunk_size = static_cast<u16>( (std::ceil(static_cast<float>(diag_length) / static_cast<float>(num_workers) )) );
-        // if (chunk_size > default_chunk_size)
-        //     chunk_size = default_chunk_size;
-    }
-
-    // PARAMETERS
-    u16 diag{0};                // The current diagonal.
-    u16 diag_length{0};         // Number of elements of the curr. diagonal.
-    u16 chunk_size{0};          // Number of elements per Worker.
-    u16 num_workers{0};         // Number of elements per Worker.
-    u16 computed_elements{0};   // Number of computed elements during a cycle
-    bool send_tasks{false};     // Tells if we have to send tasks to Workers.
-};
 
 /**
  * @brief Gives to the Worker the elements of the upper diagonal
@@ -136,14 +98,41 @@ struct Emitter: ff::ff_monode_t<int, Task> {
         // Computing a new diagonal by sending Tasks to Workers
         // Be aware that elements starts from position 1
         if(send_info.send_tasks) {
-            for(u16 num_elem = 1; num_elem <= send_info.diag_length; num_elem += send_info.chunk_size) {
-                auto* task = new Task{num_elem,
-                                      num_elem + send_info.chunk_size - 1,
-                                      send_info.diag};
-                ff_send_out(task);
+            u16 elems_to_send = send_info.diag_length;
+            u16 remaining_workers = send_info.num_workers;
+            u16 start_range{1};
+            u16 end_range{1};
+            u16 chunk_size{0};
+
+            std::cout << "\n\nStarting Computing diag " << send_info.diag << " with diag_length = " << send_info.diag_length
+                      << " num_worker = " << send_info.num_workers << std::endl;
+
+            // Starting sending tasks
+            while(elems_to_send > 0 && remaining_workers > 0) {
+
+                // Determining chunk_size
+                chunk_size = std::ceil(elems_to_send / remaining_workers);
+                if(chunk_size == 0)
+                    chunk_size = 1;
+
+                // Determining range of elems
+                end_range = start_range + (chunk_size - 1);
+
+                std::cout << " elems_to_send = " << elems_to_send <<" remaining_workers = " << remaining_workers
+                          << " chunk_size = " << chunk_size << " start_range = " << start_range << " end_range = " << end_range
+                          << std::endl;
+
+                // Sending task
+                auto* t = new Task{start_range, end_range, send_info.diag};
+                ff_send_out(t);
+
+                // Updating params
+                elems_to_send -= chunk_size;
+                remaining_workers--;
+                start_range = end_range + 1;
             }
-            send_info.send_tasks = false;
             //TODO fai fare un task all'Emitter per non fargli fare attesa attiva
+            send_info.send_tasks = false;
         }
         return GO_ON;
     }
@@ -173,11 +162,11 @@ struct Worker: ff::ff_node_t<Task, int> {
         [](u16& range, u16 limit) {
             if(range >= limit)
                 range = limit;
-        }(t->last_elem, (mtx.length - t->num_diag) );
+        }(t->end_range, (mtx.length - t->diag) );
 
         // Starting computations of elements
-        ComputeChunk(mtx, t->first_elem, t->last_elem, t->num_diag);
-        return new int (static_cast<int>(t->last_elem - t->first_elem + 1)); // Returing the number
+        ComputeChunk(mtx, t->start_range, t->end_range, t->diag);
+        return new int (static_cast<int>(t->end_range - t->start_range + 1)); // Returing the number
                                                                            // of computed elements
     }
 
@@ -199,14 +188,14 @@ int main(int argc, char* argv[]) {
     u16 mtx_length{default_length};
     if (argc >= 2) // If the user as passed its own lenght
                    // for the matrix use it instead
-        mtx_length = std::stoull(argv[1]);
+        mtx_length = std::stoul(argv[1]);
 
     // Setting the num of Workers
     u8 num_workers{default_workers};
     if(std::thread::hardware_concurrency() > 0)
        num_workers = std::thread::hardware_concurrency() -1; // One thread is for the Emitter
-    if (argc >=3)   // If the user passed its own num of
-                    // Workers use it instead
+    if (argc >=3)                                            // If the user passed its own num of
+                                                             // Workers use it instead
         num_workers = std::stoul(argv[2]);
 
     std::cout << "mtx_lenght = " << mtx_length << "\n"

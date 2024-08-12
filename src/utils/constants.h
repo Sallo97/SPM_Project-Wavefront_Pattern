@@ -10,11 +10,11 @@
 
 #include <iostream>
 
-using u16 = std::uint64_t;
+using u16 = std::uint16_t;
 using u8 = std::uint8_t;
-constexpr u16 default_length = 1 << 14;  // it is read as "2^14"
-constexpr u8 default_workers = 4;
-constexpr u8 default_chunk_size = 64;
+constexpr u16 default_length = 1 << 12;  // it is read as "2^12"
+constexpr u8 default_workers = 8;
+constexpr u8 default_chunk_size = 128;
 
 
 #endif //CONSTANTS_H

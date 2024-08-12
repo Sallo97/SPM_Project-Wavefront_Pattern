@@ -1,27 +1,18 @@
-cmake_minimum_required(VERSION 3.28)
-project(Project)
+cmake_minimum_required(VERSION 3.5)
+project(SPM_Project)
 
-set(CMAKE_CXX_STANDARD 17)
+# Setting constants
+set(CMAKE_CXX_STANDARD 20)
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(include)
+cmake_host_system_information(RESULT _host_name QUERY HOSTNAME)
 
-# Find MPI package
-find_package(MPI REQUIRED)
+if("${_host_name}" MATCHES "MsacBook-Pro-di-Salvatore.local")
+    MESSAGE("Setting up for my machine")
+    find_package(MPI REQUIRED)
+    set(CMAKE_CXX_COMPILER "/opt/homebrew/Cellar/llvm/18.1.8/bin/clang++")
+endif()
 
-# Include directories
-include_directories(${MPI_INCLUDE_PATH})
-
-# Set the optimization flag
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-
-add_executable(Project
-        src/utils/square_matrix.h
-        src/utils/elem_info.h
-        #src/sequential.cpp
-        src/parallel_fastflow.cpp
-)
-
-# Link the MPI library
-target_link_libraries(Project MPI::MPI_C)
-
+set(CMAKE_CXX_FLAGS "-Wall -pthread -O3")
+include_directories(${MPI_INCLUDE_PATH} include/ff)
+add_subdirectory(src)
