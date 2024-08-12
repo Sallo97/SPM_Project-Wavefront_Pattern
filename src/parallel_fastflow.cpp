@@ -104,8 +104,8 @@ struct Emitter: ff::ff_monode_t<int, Task> {
             u16 end_range{1};
             u16 chunk_size{0};
 
-            std::cout << "\n\nStarting Computing diag " << send_info.diag << " with diag_length = " << send_info.diag_length
-                      << " num_worker = " << send_info.num_workers << std::endl;
+            // std::cout << "\n\nStarting Computing diag " << send_info.diag << " with diag_length = " << send_info.diag_length
+            //           << " num_worker = " << send_info.num_workers << std::endl;
 
             // Starting sending tasks
             while(elems_to_send > 0 && remaining_workers > 0) {
@@ -118,9 +118,9 @@ struct Emitter: ff::ff_monode_t<int, Task> {
                 // Determining range of elems
                 end_range = start_range + (chunk_size - 1);
 
-                std::cout << " elems_to_send = " << elems_to_send <<" remaining_workers = " << remaining_workers
-                          << " chunk_size = " << chunk_size << " start_range = " << start_range << " end_range = " << end_range
-                          << std::endl;
+                // std::cout << " elems_to_send = " << elems_to_send <<" remaining_workers = " << remaining_workers
+                //           << " chunk_size = " << chunk_size << " start_range = " << start_range << " end_range = " << end_range
+                //           << std::endl;
 
                 // Sending task
                 auto* t = new Task{start_range, end_range, send_info.diag};
