@@ -80,7 +80,9 @@ struct Emitter: ff::ff_monode_t<int, Task> {
 
         // A Worker has returned a message
         if (done_wrk != nullptr) {
+
             send_info.computed_elements -= *done_wrk;
+            delete done_wrk;
 
             // Check if all elements of the current diagonal
             // have been computed. If so start work on the next one.
@@ -98,29 +100,28 @@ struct Emitter: ff::ff_monode_t<int, Task> {
         // Computing a new diagonal by sending Tasks to Workers
         // Be aware that elements starts from position 1
         if(send_info.send_tasks) {
+
             u16 elems_to_send = send_info.diag_length;
             u16 remaining_workers = send_info.num_workers;
             u16 start_range{1};
-            u16 end_range{1};
-            u16 chunk_size{0};
 
-            // std::cout << "\n\nStarting Computing diag " << send_info.diag << " with diag_length = " << send_info.diag_length
-            //           << " num_worker = " << send_info.num_workers << std::endl;
+            std::cout << "\n\nStarting Computing diag " << send_info.diag << " with diag_length = " << send_info.diag_length
+                      << " num_worker = " << send_info.num_workers << std::endl;
 
             // Starting sending tasks
             while(elems_to_send > 0 && remaining_workers > 0) {
 
                 // Determining chunk_size
-                chunk_size = std::ceil(elems_to_send / remaining_workers);
+                u16 chunk_size = std::ceil(elems_to_send / remaining_workers);
                 if(chunk_size == 0)
                     chunk_size = 1;
 
                 // Determining range of elems
-                end_range = start_range + (chunk_size - 1);
+                u16 end_range = start_range + (chunk_size - 1);
 
-                // std::cout << " elems_to_send = " << elems_to_send <<" remaining_workers = " << remaining_workers
-                //           << " chunk_size = " << chunk_size << " start_range = " << start_range << " end_range = " << end_range
-                //           << std::endl;
+                std::cout << " elems_to_send = " << elems_to_send <<" remaining_workers = " << remaining_workers
+                          << " chunk_size = " << chunk_size << " start_range = " << start_range << " end_range = " << end_range
+                          << std::endl;
 
                 // Sending task
                 auto* t = new Task{start_range, end_range, send_info.diag};
@@ -166,8 +167,14 @@ struct Worker: ff::ff_node_t<Task, int> {
 
         // Starting computations of elements
         ComputeChunk(mtx, t->start_range, t->end_range, t->diag);
-        return new int (static_cast<int>(t->end_range - t->start_range + 1)); // Returing the number
-                                                                           // of computed elements
+
+        // Dealloc task pointer
+        const u16 computed_elems = (t->end_range - t->start_range) + 1;
+        delete t;
+
+        // Send num of computed elements to Emitter
+        return new int (computed_elems); // Returing the number
+                                         // of computed elements
     }
 
     // PARAMETERS
