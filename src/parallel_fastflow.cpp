@@ -39,9 +39,9 @@
  * @param[in] end_range = reference to the number of the last element in the chunk
  * @param[in] num_diag = reference to the diagonal where the elements are stored
 */
-inline void ComputeChunk(SquareMtx& mtx, const u16& start_range, const u16& end_range, const u16& num_diag) {
+inline void ComputeChunk(SquareMtx& mtx, const u64& start_range, const u64& end_range, const u64& num_diag) {
     double temp{0.0};
-    for(u16 num_elem = start_range; num_elem <= end_range; ++num_elem)
+    for(u64 num_elem = start_range; num_elem <= end_range; ++num_elem)
     {
         ElemInfo curr_elem{mtx.length, num_diag, num_elem};
         ComputeElement(mtx, curr_elem, num_diag, temp);
@@ -66,7 +66,7 @@ inline void ComputeChunk(SquareMtx& mtx, const u16& start_range, const u16& end_
  */
 struct Emitter: ff::ff_monode_t<int, Task> {
     // Constructor
-    explicit Emitter(SquareMtx &mtx, const u16 num_workers)
+    explicit Emitter(SquareMtx &mtx, const u64 num_workers)
         : mtx(mtx), send_info(num_workers, mtx.length){ }
 
     /**
@@ -101,9 +101,9 @@ struct Emitter: ff::ff_monode_t<int, Task> {
         // Be aware that elements starts from position 1
         if(send_info.send_tasks) {
 
-            u16 elems_to_send = send_info.diag_length;
-            u16 remaining_workers = send_info.num_workers;
-            u16 start_range{1};
+            u64 elems_to_send = send_info.diag_length;
+            u64 remaining_workers = send_info.num_workers;
+            u64 start_range{1};
 
             std::cout << "\n\nStarting Computing diag " << send_info.diag << " with diag_length = " << send_info.diag_length
                       << " num_worker = " << send_info.num_workers << std::endl;
@@ -112,23 +112,25 @@ struct Emitter: ff::ff_monode_t<int, Task> {
             while(elems_to_send > 0 && remaining_workers > 0) {
 
                 // Determining chunk_size
-                u16 chunk_size = std::ceil(elems_to_send / remaining_workers);
-                if(chunk_size == 0)
-                    chunk_size = 1;
+                u64 chunk_size = std::ceil(elems_to_send / remaining_workers);
+                if(chunk_size < default_chunk_size)
+                    chunk_size = default_chunk_size;
 
                 // Determining range of elems
-                u16 end_range = start_range + (chunk_size - 1);
-
-                std::cout << " elems_to_send = " << elems_to_send <<" remaining_workers = " << remaining_workers
-                          << " chunk_size = " << chunk_size << " start_range = " << start_range << " end_range = " << end_range
-                          << std::endl;
+                u64 end_range = start_range + (chunk_size - 1);
+                if(end_range >= send_info.diag_length)
+                    end_range = send_info.diag_length;
 
                 // Sending task
                 auto* t = new Task{start_range, end_range, send_info.diag};
                 ff_send_out(t);
 
                 // Updating params
-                elems_to_send -= chunk_size;
+                if(elems_to_send <= chunk_size)
+                    elems_to_send = 0;
+                else
+                    elems_to_send -= chunk_size;
+
                 remaining_workers--;
                 start_range = end_range + 1;
             }
@@ -157,32 +159,16 @@ struct Worker: ff::ff_node_t<Task, int> {
     explicit Worker(SquareMtx& mtx) : mtx(mtx) { }
 
     int *svc(Task *t) override {
-        // Checking that the last element isn't out of bounds
-        // In case corrects it by setting it to the last
-        // element of the diagonal
-        CheckRange(mtx.length - t->diag, t->end_range);
-
         // Starting computations of elements
         ComputeChunk(mtx, t->start_range, t->end_range, t->diag);
 
         // Dealloc task pointer
-        const u16 computed_elems = (t->end_range - t->start_range) + 1;
+        const int computed_elems = static_cast<int>(t->end_range - t->start_range) + 1;
         delete t;
 
         // Send num of computed elements to Emitter
-        return new int (computed_elems); // Returing the number
+        return new int (computed_elems); // Returning the number
                                          // of computed elements
-    }
-
-    /*
-     * @brief Checks if the range goes out of bounds
-     *        and in case it corrects it
-     * @param[in] diag_length = length of the diagonal
-     * @param[out] end_range = the last element of the range
-     */
-    static void CheckRange(u16 diag_length, u16& end_range) {
-        if(end_range >= diag_length)
-            end_range = diag_length;
     }
 
     // PARAMETERS
@@ -200,7 +186,7 @@ struct Worker: ff::ff_node_t<Task, int> {
  */
 int main(int argc, char* argv[]) {
     // Setting matrix length
-    u16 mtx_length{default_length};
+    u64 mtx_length{default_length};
     if (argc >= 2) // If the user as passed its own lenght
                    // for the matrix use it instead
         mtx_length = std::stoul(argv[1]);

@@ -10,7 +10,6 @@
  * @author Salvatore Salerno
  */
 
-#include <chrono>
 #include <iostream>
 #include <vector>
 #include "utils/square_matrix.h"
@@ -28,13 +27,13 @@
 inline void ComputeMatrix(SquareMtx& mtx) {
     double temp{0.0}; // Stores the results of
                       // the DotProduct computations.
-    u16 diag_length{mtx.length};    // Stores the number of elements
+    u64 diag_length{mtx.length};    // Stores the number of elements
                                         // in each diagonal
 
-    for (u16 num_diag = 1; num_diag < mtx.length; ++num_diag) { // We assume the major diagonal has number 0
+    for (u64 num_diag = 1; num_diag < mtx.length; ++num_diag) { // We assume the major diagonal has number 0
         diag_length--;
 
-        for(u16 i = 1; i <= diag_length; ++i) {
+        for(u64 i = 1; i <= diag_length; ++i) {
             ElemInfo curr_elem{mtx.length, num_diag, i};
 
             ComputeElement(mtx, curr_elem, num_diag, temp);
@@ -54,7 +53,7 @@ inline void ComputeMatrix(SquareMtx& mtx) {
  */
 int main(const int argc, char *argv[]) {
     // Setting matrix length
-    u16 mtx_length = default_length;
+    u64 mtx_length = default_length;
     if (argc >= 2) // If the user as passed its own lenght
                    // for the matrix use it instead
         mtx_length = std::stoull(argv[1]);

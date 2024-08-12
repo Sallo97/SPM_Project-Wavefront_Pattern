@@ -19,7 +19,7 @@ struct SquareMtx {
     //Constructor
     SquareMtx()= default;
 
-    explicit SquareMtx(const u16 length)
+    explicit SquareMtx(const u64 length)
         :data(length*length, 0), length(length) {
         InitializeMatrix();
     }
@@ -30,7 +30,7 @@ struct SquareMtx {
         * @param[in] row = the row index of the cell.
         * @param[in] col = the column index of the cell.
     */
-    [[nodiscard]] u16 GetIndex(u16 row, u16 col) const {
+    [[nodiscard]] u64 GetIndex(u64 row, u64 col) const {
         return (row * length) + col;
     }
 
@@ -39,7 +39,7 @@ struct SquareMtx {
         *        is stored.
         * @param[in] elem = an ElemInfo object.
     */
-    [[nodiscard]] u16 GetIndex(const ElemInfo elem) const {
+    [[nodiscard]] u64 GetIndex(const ElemInfo elem) const {
         return (elem.row * length) + elem.col;
     }
 
@@ -47,7 +47,7 @@ struct SquareMtx {
         * @brief Initialize the matrix with the length it has.
     */
     void InitializeMatrix() {
-        for(u16 m{0}; m < length; ++m)
+        for(u64 m{0}; m < length; ++m)
             data[ (m * length) + m ] = static_cast<double>(m + 1)/ static_cast<double>(length) ;
     }
 
@@ -55,7 +55,7 @@ struct SquareMtx {
         * @brief Initialize the matrix with the given length
         * @param[in] val = the new value of the length
     */
-    void InitializeMatrix(u16 val) const {
+    void InitializeMatrix(u64 val) const {
         if(length > 0)
             std::cerr << "ERROR!!! Cannot change the row lenght when it "
                       << "has already been initialized" << std::endl;
@@ -66,7 +66,7 @@ struct SquareMtx {
         * @param[in] row = the row index of the cell.
         * @param[in] col = the column index of the cell.
     */
-    [[nodiscard]] double GetValue(u16 row, u16 col) const {
+    [[nodiscard]] double GetValue(u64 row, u64 col) const {
         return data[GetIndex(row, col)];
     }
 
@@ -76,7 +76,7 @@ struct SquareMtx {
         * @param[in] col = the column index of the cell.
         * @param[in] val = the value to set in mtx[row][col]
     */
-    void SetValue(u16 row, const u16 col, const double val) {
+    void SetValue(u64 row, const u64 col, const double val) {
         data[GetIndex(row, col)] = val;
     }
 
@@ -101,8 +101,8 @@ struct SquareMtx {
         }
 
         std::cout << "\n";
-        for(u16 i = 0; i < length; ++i) {
-            for(u16 j = 0; j < length; ++j)
+        for(u64 i = 0; i < length; ++i) {
+            for(u64 j = 0; j < length; ++j)
                 std::cout << data[GetIndex(i, j)] << " ";
             std::cout << "\n";
         }
@@ -113,13 +113,13 @@ struct SquareMtx {
         *        s.t. ∀ mtx[i][j] = j
     */
     void FillMatrix() {
-        for(u16 i = 0; i < length; ++i)
-            for (u16 j = 0; j < length; ++j)
+        for(u64 i = 0; i < length; ++i)
+            for (u64 j = 0; j < length; ++j)
                 SetValue(i, j, static_cast<double>(j));
     }
 
     // Parameters
     std::vector<double> data;
-    u16 length{0};
+    u64 length{0};
 };
 #endif //SQUARE_MATRIX_H

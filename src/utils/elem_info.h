@@ -14,7 +14,7 @@ struct ElemInfo {
     * @param[in] row = the row of the element
     * @param[in] col = the col. of the element
  */
-  explicit ElemInfo(u16 row = 0, u16 col = 0)
+  explicit ElemInfo(u64 row = 0, u64 col = 0)
     :row(row), col(col){ }
 
   /**
@@ -25,7 +25,7 @@ struct ElemInfo {
     * @param[in] num_elem = the position of the element in the diagonal
     *                       (we assume the first element has position 1)
   */
-  ElemInfo(u16 mtx_length, u16 num_diag, u16 num_elem) {
+  ElemInfo(u64 mtx_length, u64 num_diag, u64 num_elem) {
     if(mtx_length <= num_diag) {
       std::cerr << "ERROR!!! The element is not in an upper diagonal" << std::endl;
       return;
@@ -58,10 +58,10 @@ struct ElemInfo {
     if(row > col) {
       std::cerr << "ERROR!!! The current element is not in an upper diagonal" << std::endl;
     }
-    return ElemInfo{col, static_cast<u16> (row + 1)};
+    return ElemInfo{col, static_cast<u64> (row + 1)};
   }
   //PARAMETERS
-  u16 row{0};
-  u16 col{0};
+  u64 row{0};
+  u64 col{0};
 };
 #endif //ELEM_INFO_H

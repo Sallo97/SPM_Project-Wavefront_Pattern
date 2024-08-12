@@ -25,7 +25,7 @@
  * @param[out] res = where to store the result
 */
 inline void ComputeElement(const SquareMtx & mtx, const ElemInfo & elem,
-                           const u16 & vec_length, double& res) {
+                           const u64 & vec_length, double& res) {
     res = 0.0; // Reset the result value
     const ElemInfo fst_elem_vec_row{elem.GetVecRowElem()}; // Indexes for the first vector
 
@@ -35,7 +35,7 @@ inline void ComputeElement(const SquareMtx & mtx, const ElemInfo & elem,
     // that contains the same elements
 
     // Starting the DotProduct Computation
-    for(u16 i = 0; i < vec_length; ++i)
+    for(u64 i = 0; i < vec_length; ++i)
         res += mtx.GetValue(fst_elem_vec_row.row, fst_elem_vec_row.col + i)
                 * mtx.GetValue(fst_elem_vec_col.row, fst_elem_vec_col.col + i);
 
