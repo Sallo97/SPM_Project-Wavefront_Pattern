@@ -14,7 +14,7 @@ struct ElemInfo {
     * @param[in] row = the row of the element
     * @param[in] col = the col. of the element
  */
-  ElemInfo(u16 row = 0, u16 col = 0)
+  explicit ElemInfo(u16 row = 0, u16 col = 0)
     :row(row), col(col){ }
 
   /**
@@ -39,11 +39,10 @@ struct ElemInfo {
   *        of the row vector for the DotProduct of the element
   *        associated in the current obj.
   */
-  ElemInfo GetVecRowElem() {
+  [[nodiscard]] ElemInfo GetVecRowElem() const {
     if(row > col) {
       std::cerr << "ERROR!!! The current element is not in an upper diagonal" << std::endl;
     }
-
     return ElemInfo{row, row};
   }
 
@@ -55,7 +54,7 @@ struct ElemInfo {
   *                 but with a row in the lower triangular that
   *                 contains the same elements
   */
-  ElemInfo GetVecColElem() {
+  [[nodiscard]] ElemInfo GetVecColElem() const {
     if(row > col) {
       std::cerr << "ERROR!!! The current element is not in an upper diagonal" << std::endl;
     }

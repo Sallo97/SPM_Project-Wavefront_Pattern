@@ -160,10 +160,7 @@ struct Worker: ff::ff_node_t<Task, int> {
         // Checking that the last element isn't out of bounds
         // In case corrects it by setting it to the last
         // element of the diagonal
-        [](u16& range, u16 limit) {
-            if(range >= limit)
-                range = limit;
-        }(t->end_range, (mtx.length - t->diag) );
+        CheckRange(mtx.length - t->diag, t->end_range);
 
         // Starting computations of elements
         ComputeChunk(mtx, t->start_range, t->end_range, t->diag);
@@ -175,6 +172,17 @@ struct Worker: ff::ff_node_t<Task, int> {
         // Send num of computed elements to Emitter
         return new int (computed_elems); // Returing the number
                                          // of computed elements
+    }
+
+    /*
+     * @brief Checks if the range goes out of bounds
+     *        and in case it corrects it
+     * @param[in] diag_length = length of the diagonal
+     * @param[out] end_range = the last element of the range
+     */
+    static void CheckRange(u16 diag_length, u16& end_range) {
+        if(end_range >= diag_length)
+            end_range = diag_length;
     }
 
     // PARAMETERS

@@ -24,7 +24,7 @@
  *                         (usually is equal to the diagonal where the elem is from).
  * @param[out] res = where to store the result
 */
-inline void ComputeElement(const SquareMtx & mtx, ElemInfo& elem,
+inline void ComputeElement(const SquareMtx & mtx, const ElemInfo & elem,
                            const u16 & vec_length, double& res) {
     res = 0.0; // Reset the result value
     const ElemInfo fst_elem_vec_row{elem.GetVecRowElem()}; // Indexes for the first vector
