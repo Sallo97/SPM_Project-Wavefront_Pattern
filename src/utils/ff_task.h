@@ -16,8 +16,6 @@ struct Task{
     // PARAMETERS
     u64 start_range;           // First element of the range of elements to compute
     u64 end_range;            // Last element of the range of elements to compute
-    u64 diag;                 // The upper diagonal where the elements are
-                              // We assume that the major diagonal has value 0
 };
 
 

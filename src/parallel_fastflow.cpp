@@ -118,7 +118,10 @@ struct Emitter final: ff::ff_monode_t<int, Task> {
         u64 remaining_workers = send_info.num_workers;
         u64 start_range{1};
         // Determining statically the chunk_size
-        const u64 chunk_size = std::ceil(elems_to_send / remaining_workers);
+        u64 chunk_size = std::ceil(elems_to_send / remaining_workers);
+        // if (chunk_size < default_chunk_size)
+        //     chunk_size = default_chunk_size;
+
 
         // Sending tasks until all elements of the matrix have been distributed
         while(elems_to_send > 0 && remaining_workers > 0) {
@@ -132,7 +135,7 @@ struct Emitter final: ff::ff_monode_t<int, Task> {
                 end_range = send_info.diag_length;                            // or last worker
 
             // Sending task
-            auto* t = new Task{start_range, end_range, send_info.diag};
+            auto* t = new Task{start_range, end_range};
             ff_send_out(t);
 
             // Updating params
@@ -166,11 +169,16 @@ struct Emitter final: ff::ff_monode_t<int, Task> {
  *                It represents the number of computed elements.
  */
 struct Worker final: ff::ff_node_t<Task, int> {
-    explicit Worker(SquareMtx& mtx) : mtx(mtx) { }
+    explicit Worker(SquareMtx& mtx) : mtx(mtx) { diag_length = mtx.length;}
 
     int *svc(Task *t) override {
+        // Update params
+        diag++;
+        diag_length--;
+
+
         // Starting computations of elements
-        ComputeChunk(mtx, t->start_range, t->end_range, t->diag);
+        ComputeChunk(mtx, t->start_range, t->end_range, diag);
 
         // Dealloc task pointer
         const int computed_elems = static_cast<int>(t->end_range - t->start_range) + 1;
@@ -183,6 +191,8 @@ struct Worker final: ff::ff_node_t<Task, int> {
 
     // PARAMETERS
     SquareMtx& mtx; // Reference to the matrix
+    u64 diag{0};    // The worker autonomously know the number of the diagonal
+    u64 diag_length{0}; // Length of the diagonal
     double temp{0.0}; // Stores the results of
                       // the computaton of an Element
 };
