@@ -64,7 +64,7 @@ inline void ComputeChunk(SquareMtx& mtx, const u64& start_range, const u64& end_
  * Receiver Type: int, it gets one from a Worker.
  *                It represents the number of computed elements.
  */
-struct Emitter: ff::ff_monode_t<int, Task> {
+struct Emitter final: ff::ff_monode_t<int, Task> {
     // Constructor
     explicit Emitter(SquareMtx &mtx, const u64 num_workers)
         : mtx(mtx), send_info(num_workers, mtx.length){ }
@@ -100,44 +100,54 @@ struct Emitter: ff::ff_monode_t<int, Task> {
         // Computing a new diagonal by sending Tasks to Workers
         // Be aware that elements starts from position 1
         if(send_info.send_tasks) {
-
-            u64 elems_to_send = send_info.diag_length;
-            u64 remaining_workers = send_info.num_workers;
-            u64 start_range{1};
-
-            std::cout << "\n\nStarting Computing diag " << send_info.diag << " with diag_length = " << send_info.diag_length
-                      << " num_worker = " << send_info.num_workers << std::endl;
-
-            // Starting sending tasks
-            while(elems_to_send > 0 && remaining_workers > 0) {
-
-                // Determining chunk_size
-                u64 chunk_size = std::ceil(elems_to_send / remaining_workers);
-                if(chunk_size < default_chunk_size)
-                    chunk_size = default_chunk_size;
-
-                // Determining range of elems
-                u64 end_range = start_range + (chunk_size - 1);
-                if(end_range >= send_info.diag_length)
-                    end_range = send_info.diag_length;
-
-                // Sending task
-                auto* t = new Task{start_range, end_range, send_info.diag};
-                ff_send_out(t);
-
-                // Updating params
-                if(elems_to_send <= chunk_size)
-                    elems_to_send = 0;
-                else
-                    elems_to_send -= chunk_size;
-
-                remaining_workers--;
-                start_range = end_range + 1;
-            }
+            SendTasks();
             //TODO fai fare un task all'Emitter per non fargli fare attesa attiva
-            send_info.send_tasks = false;
         }
         return GO_ON;
+    }
+
+    /**
+     * @brief Sends tasks (i.e. range of elems of mtx) to Workers to compute the
+     *        current diagonal. The elems are equally distributed among the threads,
+     *        determining it for every task dynamically each time a new Task is been computed
+
+     */
+    void SendTasks() {
+        // Setting base params
+        u64 elems_to_send = send_info.diag_length;
+        u64 remaining_workers = send_info.num_workers;
+        u64 start_range{1};
+
+        // Sending tasks until all elements of the matrix have been distributed
+        while(elems_to_send > 0 && remaining_workers > 0) {
+
+            // Determining chunk_size
+            const u64 chunk_size = std::ceil(elems_to_send / remaining_workers);
+            // if(chunk_size < default_chunk_size)
+            //     chunk_size = default_chunk_size;
+
+            // Determining range of elems for task
+            u64 end_range = start_range + (chunk_size - 1);
+            if(end_range >= send_info.diag_length)
+                end_range = send_info.diag_length;
+
+            // Sending task
+            auto* t = new Task{start_range, end_range, send_info.diag};
+            ff_send_out(t);
+
+            // Updating params
+            if(elems_to_send <= chunk_size)
+                elems_to_send = 0;
+            else
+                elems_to_send -= chunk_size;
+
+            // Updating base params
+            remaining_workers--;
+            start_range = end_range + 1;
+        }
+
+        // Update flag to be aware that for the current diagonal all tasks have been sent
+        send_info.send_tasks = false;
     }
 
     // Parameters
@@ -155,7 +165,7 @@ struct Emitter: ff::ff_monode_t<int, Task> {
  * Receiver Type: Task*, it gets one from the Emitter.
  *                It represents the number of computed elements.
  */
-struct Worker: ff::ff_node_t<Task, int> {
+struct Worker final: ff::ff_node_t<Task, int> {
     explicit Worker(SquareMtx& mtx) : mtx(mtx) { }
 
     int *svc(Task *t) override {
