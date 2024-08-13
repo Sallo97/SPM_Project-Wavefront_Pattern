@@ -22,14 +22,7 @@
 #include "utils/constants.h"
 #include "utils/compute_elem.h"
 #include "utils/elem_info.h"
-#include "utils/ff_send_info.h"
-#include "utils/ff_task.h"
-
-
-/**
- * @brief Represent a task that the Emitter will give to one of
- *        its Workers.
- */
+#include "utils/ff_diag_info.h"
 
 /**
  * @brief Computes a given chunks of elements of the matrix
@@ -38,9 +31,10 @@
  * @param[in] start_range = reference to the number of the first element in the chunk
  * @param[in] end_range = reference to the number of the last element in the chunk
  * @param[in] num_diag = reference to the diagonal where the elements are stored
+ * @param[out] temp = where to store temporary values
 */
-inline void ComputeChunk(SquareMtx& mtx, const u64& start_range, const u64& end_range, const u64& num_diag) {
-    double temp{0.0};
+inline void ComputeChunk(SquareMtx& mtx, const u64& start_range, const u64& end_range, const u64& num_diag, double& temp) {
+    temp = 0.0;
     for(u64 num_elem = start_range; num_elem <= end_range; ++num_elem)
     {
         ElemInfo curr_elem{mtx.length, num_diag, num_elem};
@@ -64,10 +58,10 @@ inline void ComputeChunk(SquareMtx& mtx, const u64& start_range, const u64& end_
  * Receiver Type: int, it gets one from a Worker.
  *                It represents the number of computed elements.
  */
-struct Emitter final: ff::ff_monode_t<int, Task> {
+struct Emitter final: ff::ff_monode_t<u8, u8> {
     // Constructor
-    explicit Emitter(SquareMtx &mtx, const u64 num_workers)
-        : mtx(mtx), send_info(num_workers, mtx.length){ }
+    explicit Emitter(SquareMtx &mtx, DiagInfo& diag)
+        : mtx(mtx), diag(diag){send_tasks=true;}
 
     /**
      * @brief This methods specifies what the Emitter will send to the Workers.
@@ -76,21 +70,21 @@ struct Emitter final: ff::ff_monode_t<int, Task> {
      * @param [in] done_wrk = contains the number of elements computed
      *                        by a Worker.
      */
-    Task *svc(int *done_wrk) override {
+    u8 *svc(u8 *done_wrk) override {
 
         // A Worker has returned a message
         if (done_wrk != nullptr) {
-
-            send_info.computed_elements -= *done_wrk;
             delete done_wrk;
+            active_workers--;
 
             // Check if all elements of the current diagonal
             // have been computed. If so start work on the next one.
-            if(send_info.computed_elements <= 0) {
-                send_info.PrepareNextDiagonal();
+            if(active_workers == 0) {
+                diag.PrepareNextDiagonal();
+                send_tasks = true;
 
                 // If all diagonals have been computed we can terminate the farm
-                if(send_info.diag >= mtx.length) {
+                if(diag.num >= mtx.length) {
                     eosnotify();
                     return EOS;
                 }
@@ -98,8 +92,7 @@ struct Emitter final: ff::ff_monode_t<int, Task> {
         }
 
         // Computing a new diagonal by sending Tasks to Workers
-        // Be aware that elements starts from position 1
-        if(send_info.send_tasks) {
+        if(send_tasks) {
             SendTasks();
             //TODO fai fare un task all'Emitter per non fargli fare attesa attiva
         }
@@ -114,49 +107,32 @@ struct Emitter final: ff::ff_monode_t<int, Task> {
      */
     void SendTasks() {
         // Setting base params
-        u64 elems_to_send = send_info.diag_length;
-        u64 remaining_workers = send_info.num_workers;
-        u64 start_range{1};
-        // Determining statically the chunk_size
-        u64 chunk_size = std::ceil(elems_to_send / remaining_workers);
-        // if (chunk_size < default_chunk_size)
-        //     chunk_size = default_chunk_size;
-
+        u64 elems_to_send = diag.length;
 
         // Sending tasks until all elements of the matrix have been distributed
-        while(elems_to_send > 0 && remaining_workers > 0) {
-
-            // if(chunk_size < default_chunk_size)  Dynamic Chunk Size (More slow)
-            //     chunk_size = default_chunk_size;
-
-            // Determining range of elems for task
-            u64 end_range = start_range + (chunk_size - 1);
-            if(end_range >= send_info.diag_length || remaining_workers == 1)  // Hotfix Out of Bounds
-                end_range = send_info.diag_length;                            // or last worker
+        while(elems_to_send > 0 && active_workers < diag.num_workers) {
 
             // Sending task
-            auto* t = new Task{start_range, end_range};
-            ff_send_out(t);
+            auto* send_token = new u8{1};
+            ff_send_out(send_token);
 
             // Updating params
-            if(elems_to_send <= chunk_size) // Hotfix to avoid out of bound
+            if(elems_to_send <= diag.chunk_size) // Hotfix to avoid out of bound
                 elems_to_send = 0;
             else
-                elems_to_send -= chunk_size;
-
-            // Updating base params
-            remaining_workers--;
-            start_range = end_range + 1;
+                elems_to_send -= diag.chunk_size;
+            active_workers ++;
         }
-
         // Update flag to be aware that for the current diagonal all tasks have been sent
-        send_info.send_tasks = false;
+        send_tasks = false;
     }
 
     // Parameters
-    SquareMtx& mtx;            // Reference to the matrix to compute.
-    SendInfo send_info;        // Contains informations for what and when
-                               // to send tasks to Workers
+    bool send_tasks{false};      // Tells if we have to send tasks to Workers.
+    u8 active_workers{0};        // Workers doing a computation
+    SquareMtx& mtx;              // Reference to the matrix to compute.
+    DiagInfo& diag;              // Contains informations for what and when
+                                 // to send tasks to Workers
 };
 
 /**
@@ -168,33 +144,39 @@ struct Emitter final: ff::ff_monode_t<int, Task> {
  * Receiver Type: Task*, it gets one from the Emitter.
  *                It represents the number of computed elements.
  */
-struct Worker final: ff::ff_node_t<Task, int> {
-    explicit Worker(SquareMtx& mtx) : mtx(mtx) { diag_length = mtx.length;}
+struct Worker final: ff::ff_node_t<u8> {
+    explicit Worker(SquareMtx& mtx, DiagInfo& diag, const u8 my_id)
+        : mtx(mtx), diag(diag), my_id(my_id){ }
 
-    int *svc(Task *t) override {
-        // Update params
-        diag++;
-        diag_length--;
+    u8* svc(u8* task) override {
+        // Discarding arrived token
+        delete task;
 
+        // Determining the range
+        // Be aware that elements start at position 1
+        start_range = ((my_id - 1) * diag.chunk_size) + 1;
+        end_range = start_range + (diag.chunk_size - 1);
+        if (end_range > diag.length || my_id == diag.num_workers) // Hotfix Out of Bounds
+            end_range = diag.length;
 
-        // Starting computations of elements
-        ComputeChunk(mtx, t->start_range, t->end_range, diag);
+        // Starting Computation
+        if (start_range <= diag.length)
+            // Starting computations of elements
+            ComputeChunk(mtx, start_range, end_range, diag.num, temp);
 
-        // Dealloc task pointer
-        const int computed_elems = static_cast<int>(t->end_range - t->start_range) + 1;
-        delete t;
-
-        // Send num of computed elements to Emitter
-        return new int (computed_elems); // Returning the number
-                                         // of computed elements
+        // Sending Token
+        return new u8;
     }
 
-    // PARAMETERS
-    SquareMtx& mtx; // Reference to the matrix
-    u64 diag{0};    // The worker autonomously know the number of the diagonal
-    u64 diag_length{0}; // Length of the diagonal
-    double temp{0.0}; // Stores the results of
-                      // the computaton of an Element
+    // PARAMS
+    SquareMtx& mtx;     // Reference of the matrix to compute
+    DiagInfo& diag;     // Contains informations updated by the Emitter regarding
+                        // the diagonal to compute
+    u8 my_id{0};        // The id of the worker, id in [1, num_workers]
+    u64 start_range{0}; // Value used during a diag computation for telling the first element of the range
+    u64 end_range{0};   // Value used during a diag computation for telling the last element of the range
+    double temp{0.0};   // Value where to store temporary computations for an element
+
 };
 
 /**
@@ -204,35 +186,36 @@ struct Worker final: ff::ff_node_t<Task, int> {
  * @param[in] argc = the number of cmd arguments.
  * @note If no argument is passed, then we assume the matrix has default length
  */
-int main(int argc, char* argv[]) {
+int main(const int argc, char* argv[]) {
     // Setting matrix length
     u64 mtx_length{default_length};
     if (argc >= 2) // If the user as passed its own lenght
-                   // for the matrix use it instead
-        mtx_length = std::stoul(argv[1]);
+        // for the matrix use it instead
+            mtx_length = std::stoul(argv[1]);
 
     // Setting the num of Workers
     u8 num_workers{default_workers};
     if(std::thread::hardware_concurrency() > 0)
-       num_workers = std::thread::hardware_concurrency() -1; // One thread is for the Emitter
+        num_workers = std::thread::hardware_concurrency() -1; // One thread is for the Emitter
     if (argc >=3)                                            // If the user passed its own num of
-                                                             // Workers use it instead
-        num_workers = std::stoul(argv[2]);
+        // Workers use it instead
+            num_workers = std::stoul(argv[2]);
 
     std::cout << "mtx_lenght = " << mtx_length << "\n"
               << "hardware_concurrency = " << std::thread::hardware_concurrency() << "\n"
               << "num_workers = " << static_cast<int>(num_workers) << std::endl;
 
-    // Initialize Matrix
-    SquareMtx mtx(mtx_length);
+    // Initialize Matrix and Diag
+    SquareMtx mtx{mtx_length};
+    DiagInfo diag{mtx.length, num_workers};
 
     // Creating a Farm with Feedback Channels and no Collector
-    Emitter emt{mtx, num_workers};
+    Emitter emt{mtx, diag};
     ff::ff_Farm<> farm(
             [&]() {
             std::vector<std::unique_ptr<ff::ff_node>> workers;
             for(size_t i=0; i < num_workers; ++i)
-                workers.push_back(std::make_unique<Worker>(mtx));
+                workers.push_back(std::make_unique<Worker>(mtx, diag, i+1));
             return workers;
         }(),
         emt);
@@ -245,7 +228,7 @@ int main(int argc, char* argv[]) {
     // If we have a 1x1 matrix, then we do not need
     // to apply the computation
     if (mtx_length > 1) {
-        if(farm.run_and_wait_end()<0) {
+        if(farm.run_and_wait_end() < 0) {
             std::cerr<<"ERROR!!! An error occurred while running the farm";
             return -1;
         }
