@@ -117,26 +117,26 @@ struct Emitter final: ff::ff_monode_t<int, Task> {
         u64 elems_to_send = send_info.diag_length;
         u64 remaining_workers = send_info.num_workers;
         u64 start_range{1};
+        // Determining statically the chunk_size
+        const u64 chunk_size = std::ceil(elems_to_send / remaining_workers);
 
         // Sending tasks until all elements of the matrix have been distributed
         while(elems_to_send > 0 && remaining_workers > 0) {
 
-            // Determining chunk_size
-            const u64 chunk_size = std::ceil(elems_to_send / remaining_workers);
-            // if(chunk_size < default_chunk_size)
+            // if(chunk_size < default_chunk_size)  Dynamic Chunk Size (More slow)
             //     chunk_size = default_chunk_size;
 
             // Determining range of elems for task
             u64 end_range = start_range + (chunk_size - 1);
-            if(end_range >= send_info.diag_length)
-                end_range = send_info.diag_length;
+            if(end_range >= send_info.diag_length || remaining_workers == 1)  // Hotfix Out of Bounds
+                end_range = send_info.diag_length;                            // or last worker
 
             // Sending task
             auto* t = new Task{start_range, end_range, send_info.diag};
             ff_send_out(t);
 
             // Updating params
-            if(elems_to_send <= chunk_size)
+            if(elems_to_send <= chunk_size) // Hotfix to avoid out of bound
                 elems_to_send = 0;
             else
                 elems_to_send -= chunk_size;
