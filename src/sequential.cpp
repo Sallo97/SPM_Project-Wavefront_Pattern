@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include <vector>
+#include <chrono>
 #include "utils/square_matrix.h"
 #include "utils/elem_info.h"
 #include "utils/constants.h"
