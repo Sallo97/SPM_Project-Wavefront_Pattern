@@ -19,7 +19,7 @@ struct SquareMtx {
     //Constructor
     SquareMtx()= default;
 
-    explicit SquareMtx(const u64 length)
+    explicit SquareMtx(const u64& length)
         :data(length*length, 0), length(length) {
         InitializeMatrix();
     }
@@ -30,7 +30,7 @@ struct SquareMtx {
         * @param[in] row = the row index of the cell.
         * @param[in] col = the column index of the cell.
     */
-    [[nodiscard]] u64 GetIndex(u64 row, u64 col) const {
+    [[nodiscard]] u64 GetIndex(const u64 row, const u64 col) const {
         return (row * length) + col;
     }
 
@@ -66,7 +66,7 @@ struct SquareMtx {
         * @param[in] row = the row index of the cell.
         * @param[in] col = the column index of the cell.
     */
-    [[nodiscard]] double GetValue(u64 row, u64 col) const {
+    [[nodiscard]] double GetValue(const u64 row, const u64 col) const {
         return data[GetIndex(row, col)];
     }
 
