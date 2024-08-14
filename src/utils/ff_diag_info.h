@@ -25,6 +25,8 @@ struct DiagInfo {
         num++;
         length--;
         chunk_size = static_cast<u64>(std::ceil(length / num_workers));
+        if (chunk_size == 0) // chunk_size needs to be at least 1
+            chunk_size = 1;
     }
 
     // PARAMETERS
