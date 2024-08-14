@@ -11,10 +11,8 @@
  */
 
 #include <iostream>
-#include <vector>
 #include <chrono>
 #include "utils/square_matrix.h"
-#include "utils/elem_info.h"
 #include "utils/constants.h"
 #include "utils/compute_elem.h"
 
@@ -28,20 +26,21 @@
 inline void ComputeMatrix(SquareMtx& mtx) {
     double temp{0.0}; // Stores the results of
                       // the DotProduct computations.
-    u64 diag_length{mtx.length};    // Stores the number of elements
-                                        // in each diagonal
+    u64 length{mtx.length};    // Stores the number of elements
+                                // in each diagonal
 
-    for (u64 num_diag = 1; num_diag < mtx.length; ++num_diag) { // We assume the major diagonal has number 0
-        diag_length--;
+    for (u64 diag = 1; diag < mtx.length; ++diag) { // We assume the major diagonal has number 0
+        length--;
 
-        for(u64 i = 1; i <= diag_length; ++i) {
-            ElemInfo curr_elem{mtx.length, num_diag, i};
+        for(u64 i = 1; i <= length; ++i) {
+            u64 row = i - 1;
+            u64 col = row + diag;
 
-            ComputeElement(mtx, curr_elem, num_diag, temp);
+            ComputeElement(mtx, row, col, diag, temp);
 
             // Storing the result
-            mtx.SetValue(curr_elem, temp);
-            mtx.SetValue(curr_elem.col, curr_elem.row, temp);
+            mtx.SetValue(row, col, temp);
+            mtx.SetValue(col, row, temp);
         }
     }
 }
