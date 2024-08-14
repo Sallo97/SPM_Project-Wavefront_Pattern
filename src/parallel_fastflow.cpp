@@ -23,34 +23,9 @@
 #include "utils/compute_elem.h"
 #include "utils/ff_diag_info.h"
 
-/**
- * @brief Computes a given chunks of elements of the matrix
- *        following the Wavefront Computation
- * @param[out] mtx = reference of the matrix where compute the elements
- * @param[in] start_range = reference to the number of the first element in the chunk
- * @param[in] end_range = reference to the number of the last element in the chunk
- * @param[in] num_diag = reference to the diagonal where the elements are stored
- * @param[out] temp = where to store temporary values
-*/
-inline void ComputeChunk(SquareMtx& mtx, u64& start_range, const u64& end_range, const u64& num_diag, double& temp) {
-    temp = 0.0;
-    while(start_range <= end_range)
-    {   // Determining element
-        // ElemInfo curr_elem{mtx.length, num_diag, start_range};
-        u64 row = start_range - 1;
-        u64 col = row + num_diag;
+//TODO ENUM FOR TYPE OF TASK
 
-        // Computing element
-        ComputeElement(mtx, row, col, num_diag, temp);
 
-        // Storing the result
-        mtx.SetValue(row, col, temp);
-        mtx.SetValue(col, row, temp);
-
-        // Setting next element to compute
-        ++start_range;
-    }
-}
 
 /**
  * @brief Gives to the Worker the elements of the upper diagonal
@@ -67,7 +42,7 @@ inline void ComputeChunk(SquareMtx& mtx, u64& start_range, const u64& end_range,
 struct Emitter final: ff::ff_monode_t<u8, u8> {
     // Constructor
     explicit Emitter(SquareMtx &mtx, DiagInfo& diag)
-        : mtx(mtx), diag(diag){send_tasks=true;}
+        : mtx(mtx), diag(diag){send_tasks = true;}
 
     /**
      * @brief This methods specifies what the Emitter will send to the Workers.
@@ -117,10 +92,10 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
 
         // Sending tasks until all elements of the matrix have been distributed
         while(elems_to_send > 0 && active_workers < diag.num_workers) {
-
             // Sending tasks
-            auto* send_token = new u8{1};
-            ff_send_out(send_token);
+            auto* id_chunk = new u8{static_cast<u8>(active_workers + 1)};
+            ff_send_out(id_chunk);
+
 
             // Updating params
             if(elems_to_send <= diag.chunk_size) // Hotfix to avoid out of bound
@@ -129,6 +104,7 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
                 elems_to_send -= diag.chunk_size;
             active_workers ++;
         }
+
         // Update flag to be aware that for the current diagonal all tasks have been sent
         send_tasks = false;
     }
@@ -151,34 +127,62 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
  *                It represents the number of computed elements.
  */
 struct Worker final: ff::ff_node_t<u8> {
-    explicit Worker(SquareMtx& mtx, DiagInfo& diag, const u8 my_id)
-        : mtx(mtx), diag(diag), my_id(my_id){ }
+    explicit Worker(SquareMtx& mtx, DiagInfo& diag)
+        : mtx(mtx), diag(diag){ id_chunk = 0; }
 
     u8* svc(u8* task) override {
-        // Discarding arrived token
-        delete task;
+        id_chunk = *task;
 
+        // Computing elemes
+        ComputeChunk();
+
+        // Discarding arrived token and sending a new one
+        delete task;
+        return new u8;
+    }
+
+    /**
+     * @brief Computes a given chunks of elements of the matrix
+     *        following the Wavefront Computation
+     */
+    void ComputeChunk() {
         // Determining the range
         // Be aware that elements start at position 1
-        start_range = ((my_id - 1) * diag.chunk_size) + 1;
+        start_range = ((id_chunk - 1) * diag.chunk_size) + 1;
         end_range = start_range + (diag.chunk_size - 1);
-        if (end_range > diag.length || my_id == diag.num_workers) // Hotfix Out of Bounds
+        if (end_range > diag.length || id_chunk == diag.num_workers) // Hotfix Out of Bounds
             end_range = diag.length;
 
-        // Starting Computation
-        if (start_range <= diag.length)
-            // Starting computations of elements
-            ComputeChunk(mtx, start_range, end_range, diag.num, temp);
+        // If start_range is out of bounds skip computation
+        if (start_range > diag.length)
+            return;
 
-        // Sending Token
-        return new u8;
+        // Starting Computation
+        temp = 0.0;
+        while(start_range <= end_range){
+
+            // Determining element
+            // ElemInfo curr_elem{mtx.length, num_diag, start_range};
+            u64 row = start_range - 1;
+            u64 col = row + diag.num;
+
+            // Computing element
+            ComputeElement(mtx, row, col, diag.num, temp);
+
+            // Storing the result
+            mtx.SetValue(row, col, temp);
+            mtx.SetValue(col, row, temp);
+
+            // Setting next element to compute
+            ++start_range;
+        }
     }
 
     // PARAMS
     SquareMtx& mtx;     // Reference of the matrix to compute
     DiagInfo& diag;     // Contains informations updated by the Emitter regarding
                         // the diagonal to compute
-    u8 my_id{0};        // The id of the worker, id in [1, num_workers]
+    u8 id_chunk{0};     // Identifies which chunk of elems the Worker will compute, id_chunk in [1, num_workers]
     u64 start_range{0}; // Value used during a diag computation for telling the first element of the range
     u64 end_range{0};   // Value used during a diag computation for telling the last element of the range
     double temp{0.0};   // Value where to store temporary computations for an element
@@ -221,7 +225,7 @@ int main(const int argc, char* argv[]) {
             [&]() {
             std::vector<std::unique_ptr<ff::ff_node>> workers;
             for(size_t i=0; i < num_workers; ++i)
-                workers.push_back(std::make_unique<Worker>(mtx, diag, i+1));
+                workers.push_back(std::make_unique<Worker>(mtx, diag));
             return workers;
         }(),
         emt);
