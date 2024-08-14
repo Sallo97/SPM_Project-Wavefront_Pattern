@@ -21,7 +21,6 @@
 #include "utils/square_matrix.h"
 #include "utils/constants.h"
 #include "utils/compute_elem.h"
-#include "utils/elem_info.h"
 #include "utils/ff_diag_info.h"
 
 /**
@@ -33,16 +32,23 @@
  * @param[in] num_diag = reference to the diagonal where the elements are stored
  * @param[out] temp = where to store temporary values
 */
-inline void ComputeChunk(SquareMtx& mtx, const u64& start_range, const u64& end_range, const u64& num_diag, double& temp) {
+inline void ComputeChunk(SquareMtx& mtx, u64& start_range, const u64& end_range, const u64& num_diag, double& temp) {
     temp = 0.0;
-    for(u64 num_elem = start_range; num_elem <= end_range; ++num_elem)
-    {
-        ElemInfo curr_elem{mtx.length, num_diag, num_elem};
-        ComputeElement(mtx, curr_elem, num_diag, temp);
+    while(start_range <= end_range)
+    {   // Determining element
+        // ElemInfo curr_elem{mtx.length, num_diag, start_range};
+        u64 row = start_range - 1;
+        u64 col = row + num_diag;
+
+        // Computing element
+        ComputeElement(mtx, row, col, num_diag, temp);
 
         // Storing the result
-        mtx.SetValue(curr_elem, temp);
-        mtx.SetValue(curr_elem.col, curr_elem.row, temp);
+        mtx.SetValue(row, col, temp);
+        mtx.SetValue(col, row, temp);
+
+        // Setting next element to compute
+        ++start_range;
     }
 }
 
@@ -112,7 +118,7 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
         // Sending tasks until all elements of the matrix have been distributed
         while(elems_to_send > 0 && active_workers < diag.num_workers) {
 
-            // Sending task
+            // Sending tasks
             auto* send_token = new u8{1};
             ff_send_out(send_token);
 
