@@ -48,14 +48,13 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
      * @brief This methods specifies what the Emitter will send to the Workers.
      *        It will be executed at the start of the farm and each time a Worker
      *        returns a value through the Feedback Channel.
-     * @param [in] done_wrk = contains the number of elements computed
-     *                        by a Worker.
+     * @param [in] task_done = the task object returned by the Worker
      */
-    u8 *svc(u8 *done_wrk) override {
+    u8 *svc(u8 *task_done) override {
 
         // A Worker has returned a message
-        if (done_wrk != nullptr) {
-            delete done_wrk;
+        if (task_done != nullptr) {
+            delete task_done;
             active_workers--;
 
             // Check if all elements of the current diagonal
@@ -95,7 +94,6 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
             // Sending tasks
             auto* id_chunk = new u8{static_cast<u8>(active_workers + 1)};
             ff_send_out(id_chunk);
-
 
             // Updating params
             if(elems_to_send <= diag.chunk_size) // Hotfix to avoid out of bound
@@ -137,8 +135,7 @@ struct Worker final: ff::ff_node_t<u8> {
         ComputeChunk();
 
         // Discarding arrived token and sending a new one
-        delete task;
-        return new u8;
+        return task;
     }
 
     /**
