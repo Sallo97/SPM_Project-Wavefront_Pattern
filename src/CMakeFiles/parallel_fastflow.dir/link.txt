@@ -1,1 +1,0 @@
-/opt/homebrew/Cellar/llvm/18.1.8/bin/clang++ -Wall -pthread -O3 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/parallel_fastflow.dir/parallel_fastflow.cpp.o -o parallel_fastflow 

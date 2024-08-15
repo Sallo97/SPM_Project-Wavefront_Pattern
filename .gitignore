@@ -2,3 +2,5 @@ cmake-build-debug/
 .git/
 .idea/
 .DS_Store
+.CMakeFiles/
+./src/CMakeFiles

@@ -1,1 +1,0 @@
-/opt/homebrew/Cellar/llvm/18.1.8/bin/clang++ -Wall -pthread -O3 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/sequential.dir/sequential.cpp.o -o sequential  /opt/homebrew/Cellar/open-mpi/5.0.3_1/lib/libmpi.dylib 

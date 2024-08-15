@@ -1,6 +1,0 @@
-/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern/CMakeFiles/edit_cache.dir
-/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern/CMakeFiles/rebuild_cache.dir
-/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern/src/CMakeFiles/sequential.dir
-/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern/src/CMakeFiles/parallel_fastflow.dir
-/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern/src/CMakeFiles/edit_cache.dir
-/Users/sallo/Documents/University/Courses/[SPM] - Parallels and Distributed Systems/[SPM PROJECT]WaveFront_Pattern/src/CMakeFiles/rebuild_cache.dir
