@@ -59,9 +59,9 @@ inline void ComputeElement(const SquareMtx & mtx, const u64& elem_row, const u64
     // Reset the result value
     res = 0.0;
 
-    // Determining row and cols of the mtx
-    const u64& fst_vec_row = elem_row;   const u64& fst_vec_col = elem_row;
-    const u64& snd_vec_row = elem_col;   const u64 snd_vec_col = elem_row + 1;
+    // // Determining row and cols of the mtx
+    // const u64& fst_vec_row = elem_row;   const u64& fst_vec_col = elem_row;
+    // const u64& snd_vec_row = elem_col;   const u64 snd_vec_col = elem_row + 1;
 
     // In reality We do not work with the column vector
     // but with a row in the lower triangular
@@ -69,8 +69,8 @@ inline void ComputeElement(const SquareMtx & mtx, const u64& elem_row, const u64
 
     // Starting the DotProduct Computation
     for(u64 i = 0; i < vec_length; ++i)
-        res += mtx.GetValue(fst_vec_row, fst_vec_col + i)
-                * mtx.GetValue(snd_vec_row, snd_vec_col + i);
+        res += mtx.GetValue(elem_row, elem_row + i)
+                * mtx.GetValue(elem_col, elem_row + 1 + i);
 
     // Storing the cuberoot of the final result
     res = std::cbrt(res);
