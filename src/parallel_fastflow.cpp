@@ -12,20 +12,16 @@
  * @author Salvatore Salerno
  */
 
-#include<vector>
-#include<iostream>
-#include<chrono>
-#include<ff/ff.hpp>
-#include<ff/farm.hpp>
-#include<thread>
-#include "utils/square_matrix.h"
-#include "utils/constants.h"
-#include "utils/compute_elem.h"
-#include "utils/ff_diag_info.h"
-
-//TODO ENUM FOR TYPE OF TASK
-
-
+#include <vector>
+#include <iostream>
+#include <chrono>
+#include <thread>
+#include "../include/ff/ff.hpp"
+#include "../include/ff/farm.hpp"
+#include "./utils/square_matrix.h"
+#include "./utils/constants.h"
+#include "./utils/compute_elem.h"
+#include "./utils/ff_diag_info.h"
 
 /**
  * @brief Gives to the Worker the elements of the upper diagonal
@@ -237,7 +233,7 @@ int main(const int argc, char* argv[]) {
     if (mtx_length > 1) {
         if(farm.run_and_wait_end() < 0) {
             std::cerr<<"ERROR!!! An error occurred while running the farm";
-            return -1;
+            return EXIT_FAILURE;
         }
     }
 
@@ -245,5 +241,5 @@ int main(const int argc, char* argv[]) {
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Time taken for FastFlown version: " << duration.count() << " milliseconds" << std::endl;
     mtx.PrintMtx();
-    return 0;
+    return EXIT_SUCCESS;
 }

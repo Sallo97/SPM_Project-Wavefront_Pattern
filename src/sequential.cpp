@@ -10,6 +10,7 @@
  * @author Salvatore Salerno
  */
 
+#include <vector>
 #include <iostream>
 #include <chrono>
 #include "utils/square_matrix.h"
@@ -72,6 +73,5 @@ int main(const int argc, char *argv[]) {
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     std::cout << "Time taken for sequential version: " << duration.count() << " milliseconds" << std::endl;
-    mtx.PrintMtx();
-    return 0;
+    return EXIT_SUCCESS;
 }
