@@ -67,6 +67,10 @@ struct SquareMtx {
         * @param[in] col = the column index of the cell.
     */
     [[nodiscard]] double GetValue(const u64 row, const u64 col) const {
+        if(length == 0) {
+            std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
+            return -1.0;
+        }
         return data[GetIndex(row, col)];
     }
 
@@ -77,6 +81,10 @@ struct SquareMtx {
         * @param[in] val = the value to set in mtx[row][col]
     */
     void SetValue(u64 row, const u64 col, const double val) {
+        if(length == 0) {
+            std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
+            return;
+        }
         data[GetIndex(row, col)] = val;
     }
 
@@ -88,6 +96,10 @@ struct SquareMtx {
     * @param[in] val = the value to store
     */
     void SetValue(const ElemInfo& elem, const double val) {
+        if(length == 0) {
+            std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
+            return;
+        }
         data[GetIndex(elem.row, elem.col)] = val;
     }
 
@@ -95,6 +107,10 @@ struct SquareMtx {
         * @brief Prints the whole matrix
     */
     void PrintMtx() const{
+        if(length == 0) {
+            std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
+            return;
+        }
         if (length > 100) {
             std::cerr << "ERROR!!! The matrix is too big to print" << std::endl;
             return;
@@ -113,6 +129,11 @@ struct SquareMtx {
         *        s.t. ∀ mtx[i][j] = j
     */
     void FillMatrix() {
+        if(length == 0) {
+            std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
+            return;
+        }
+
         for(u64 i = 0; i < length; ++i)
             for (u64 j = 0; j < length; ++j)
                 SetValue(i, j, static_cast<double>(j));
