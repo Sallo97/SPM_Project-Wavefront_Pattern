@@ -1,12 +1,9 @@
 # Compiling sequential code
-add_executable(sequential sequential.cpp utils/square_matrix.h utils/elem_info.h utils/constants.h utils/compute_elem.h)
+add_executable(sequential sequential.cpp)
 
 #Compiling FastFlow code
-add_executable(parallel_fastflow parallel_fastflow.cpp
-        utils/square_matrix.h
-        utils/constants.h
-        utils/compute_elem.h
-        utils/ff_task.h
-        utils/ff_diag_info.h)
+add_executable(parallel_fastflow parallel_fastflow.cpp)
 
-#TODO ADD MPI Codep
+#Compiling MPI Code
+add_executable(parallel_mpi parallel_mpi.cpp ${MPI_INCLUDE_PATH}/mpi.h)
+target_link_libraries(parallel_mpi MPI::MPI_CXX)
