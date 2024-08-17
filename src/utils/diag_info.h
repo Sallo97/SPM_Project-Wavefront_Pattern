@@ -1,9 +1,14 @@
-//
-// Created by Salvatore Salerno on 11/08/24. TODO
-//
+/**
+ * @file diag_info.h
+ * @brief The DiagInfo class used in the FastFlow and MPI Implementation.
+ *        It contains informations regarding the current diagonal of the
+ *        matrix being computed.
+ * @author Salvatore Salerno
+ */
 
-#ifndef FF_DIAG_INFO_H
-#define FF_DIAG_INFO_H
+
+#ifndef DIAG_INFO_H
+#define DIAG_INFO_H
 
 #include "constants.h"
 
@@ -13,6 +18,11 @@
  *        ONLY THE EMITTER MODIFIES IT, THE WORKER ONLY READ IT
  */
 struct DiagInfo {
+    /**
+     * @brief Constructor of the class
+     * @param[in] base_length = the length of the matrix.
+     * @param[in] num_workers = the number of Workers in execution.
+     */
     explicit DiagInfo(const u64 base_lenght, const int num_workers) : num_workers(num_workers), length(base_lenght) {
         PrepareNextDiagonal();
     }
@@ -54,8 +64,8 @@ struct DiagInfo {
     const int num_workers;
     u64 ff_chunk_size{0};
     u64 mpi_chunk_size{0};
-    u64 num{0}; // The current diagonal.
+    u64 num{0};    // Number of the current diagonal. The major diagonal is counted as 0.
     u64 length{0}; // Number of elements of the curr. diagonal.
 };
 
-#endif // FF_DIAG_INFO_H
+#endif // DIAG_INFO_H
