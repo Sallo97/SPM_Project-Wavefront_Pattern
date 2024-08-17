@@ -6,190 +6,200 @@
 
 #include "utils/constants.h"
 #include "utils/ff_diag_info.h"
+#include "utils/mpi_myinfo.h"
 #include "utils/square_matrix.h"
-using double_vec = std::vector<std::vector<double>>;
 
-// TODO DESCRIPTION
-inline void SetScatterArrays(u64 num_elem, DiagInfo& diag, SquareMtx& mtx,
-                      int num_workers, u64 elem_row, u64 elem_col,
-                      vec_int& fst_counts, vec_int& fst_displs,
-                      vec_int& snd_counts, vec_int& snd_displs) {
+/**
+ *
+ * @param vec_row[in] = the row vector
+ * @param vec_col[in] = the col vector
+ * @param length[in] = length of the two vectors
+ * @param temp[out] = where to store the computation
+ */
+void LocalDotProd(const std::vector<double>& vec_row, const std::vector<double>& vec_col, u64 length, double& temp) {
+    temp = 0.0;
+    for (u64 i = 0; i < length; ++i)
+        temp += vec_row[i] * vec_col[i];
+}
 
+/**
+ * @brief Sets ScatterV_arrays (row_displs, col_displs, counts)
+ * @param diag[in] = obj containing informations on the diagonal
+ * @param mtx[in] = obj containing the matrix (if Master), or a dummy buffer (if Worker)
+ * @param elem_row[in] = row index of the element
+ * @param elem_col[in] = col index of the element
+ * @param my_stuff[out] = obj containing the arrays to modify
+ */
+inline auto SetScatterArrays(const DiagInfo &diag, const SquareMtx &mtx, const u64 elem_row, const u64 elem_col, MyInfo &my_stuff)
+        -> void {
 
-    // Determine first elem of fst_vec
-    const u64 fst_vec_row = elem_row;
-    const u64 fst_vec_col = elem_row;
+    // Determine first elem of row_vec
+    const u64 row_vec_row = elem_row;
+    const u64 row_vec_col = elem_row;
 
-    // Determine fist elem snd_vector
-    const u64 snd_vec_row = elem_col;
-    const u64 snd_vec_col = elem_row + 1;
-
-    std::cout << "fst_vec_row = " << fst_vec_row << " fst_vec_col = " << fst_vec_col << "\n"
-              << "snd_vec_row = " << snd_vec_row << " snd_vec_col = " << snd_vec_col << std::endl;
+    // Determine fist elem col_vector
+    // In reality we use a row vector in the down-part of the Matrix where we store
+    // the values flipped. TODO GIVE A BETTER EXPLAINATION
+    const u64 col_vec_row = elem_col;
+    const u64 col_vec_col = elem_row + 1;
 
     // Filling arrays
-    u64 start_range;    u64 end_range;
-    for(int id = 0; id < num_workers; ++id) {
-        // Determine range for fst_vec
-        start_range = fst_vec_col + (id * diag.chunk_size);
-        end_range = (start_range + diag.chunk_size) - 1;
-        if(end_range >= elem_col)
+    for (int id = 0; id < my_stuff.num_processes; ++id) {
+
+        // Filling row_vec
+        // We move by column
+        u64 start_range = row_vec_col + (id * diag.mpi_chunk_size);
+        if (start_range >= elem_col) {  // Checking Out of Bounds
+            my_stuff.SetOutOfBounds(id);
+            break;
+        }
+        u64 end_range = (start_range + diag.mpi_chunk_size) - 1;
+        if (end_range >= elem_col) // Checking Out of Bounds
             end_range = elem_col - 1;
-        fst_counts[id] = (end_range - start_range) + 1;
-        fst_displs[id] = mtx.GetIndex(fst_vec_row, start_range);    // TODO CAMBIA TIPO VETTORE IN U64
+        my_stuff.counts[id] = (static_cast<int>((end_range - start_range)) + 1);
+        my_stuff.row_displs[id] =
+                static_cast<int>(mtx.GetIndex(row_vec_row, start_range));
 
         // Determining range for snd_vec
-        start_range = snd_vec_col + (id * diag.chunk_size);
-        end_range = (start_range + diag.chunk_size) - 1;
-        if(end_range > elem_col)
-            end_range = elem_col ;
-        snd_counts[id] = (end_range - start_range) + 1;
-        snd_displs[id] = mtx.GetIndex(snd_vec_row, start_range);    // TODO CAMBIA TIPO VETTORE IN U64
+        start_range = col_vec_col + (id * diag.mpi_chunk_size);
+        my_stuff.col_displs[id] =
+                static_cast<int>(mtx.GetIndex(col_vec_row, start_range));
     }
 }
 
-// TODO DESCRIZIONE
-inline void ComputeElem(int my_rank, u64 num_elem, DiagInfo& diag, SquareMtx& mtx,
-                      int num_workers,
-                      vec_int& row_counts, vec_int& row_displs,
-                      vec_int& col_counts, vec_int& col_displs,
-                      vec_double& local_row, vec_double& local_col,
-                      double& temp, double& total_sum) {
 
-    // Determining row and col of the element
+/**
+ * @brief Execute a parallel computation of an element of the matrix.
+ *        Each Process determines its chunk of elements and gets it through ScatterV.
+ *        Then they apply separately the DotProduct, returning the computed value using Reduce.
+ *        Finally the Master Process will get the sum of all local DotProduct, apply to it the
+ *        cube_root and then store it in the matrix.
+ * @param num_elem[in] = number of the elements in regards of the diagonal where it is stored.
+ *                       NOTE: the elements start at position 1.
+ * @param diag = obj containing diagonal informations
+ * @param my_stuff = obj containing arrays and params of the process
+ * @param mtx = for the Master it contains the matrix to compute
+ *              for the Workers it contains a dummy buffer for the ScatterV.
+ */
+inline void ComputeElem(const u64 num_elem, const DiagInfo & diag, MyInfo &my_stuff, const SquareMtx & mtx) {
+
+    // [ALL] Determining row and col of the element
     const u64 row = num_elem - 1;
     const u64 col = row + diag.num;
-    if(my_rank == MASTER_RANK)
+    double temp{0};
 
     // [ALL] Filling count and displs arrays
-    SetScatterArrays(num_elem, diag, mtx, num_workers, row, col, row_counts, row_displs,
-                     col_counts, col_displs);
-    int local_count = row_counts[my_rank];
+    SetScatterArrays(diag, mtx, row, col, my_stuff);
 
-    std::cout << "Worker " << my_rank << " with "
-              << "fst_count = " << row_counts[my_rank] << " fst_displs = " << row_displs[my_rank]
-              << "snd_count = " << col_counts[my_rank] << " snd_displs = " << col_displs[my_rank] << std::endl;
+    // [ALL] Determining if I have to do a LocalDotProduct Computation i.e. if my cell in counts is > 0
+    if (const int local_count = my_stuff.counts[my_stuff.my_rank]; local_count != 0) {
+        // [ALL] Retrieving row vector
+        MPI_Scatterv(mtx.data->data(), my_stuff.counts.data(), my_stuff.row_displs.data(), MPI_DOUBLE,
+                     my_stuff.local_row.data(), local_count, MPI_DOUBLE, MASTER_RANK, MPI_COMM_WORLD);
 
-    // [ALL] Calling Scatterv for the row vector
-    MPI_Scatterv(mtx.data.data(),
-                 row_counts.data(),
-                 row_displs.data(),
-                 MPI_DOUBLE,
-                 local_row.data(),
-                 local_count,
-                 MPI_DOUBLE,
-                 MASTER_RANK,
-                 MPI_COMM_WORLD);
+        // [ALL] Retrieving col vector
+        MPI_Scatterv(mtx.data->data(), my_stuff.counts.data(), my_stuff.col_displs.data(), MPI_DOUBLE,
+                     my_stuff.local_col.data(), local_count, MPI_DOUBLE, MASTER_RANK, MPI_COMM_WORLD);
 
-    // [ALL] Calling Scatterv for the col vector
-    MPI_Scatterv(mtx.data.data(),
-                 col_counts.data(),
-                 col_displs.data(),
-                 MPI_DOUBLE,
-                 local_col.data(),
-                 local_count,
-                 MPI_DOUBLE,
-                 MASTER_RANK,
-                 MPI_COMM_WORLD);
-
-    // [ALL] Executing local DotProd
-    temp = 0.0;
-    for(u64 i = 0; i < col_counts[my_rank]; ++i)
-        temp += local_row[i] + local_col[i];
-
-    // TODO [ALL] Calling Reduce
-    MPI_Reduce(&temp,
-               &total_sum,
-               1,
-               MPI_DOUBLE,
-               MPI_SUM,
-               MASTER_RANK,
-               MPI_COMM_WORLD);
-
-    if(my_rank == MASTER_RANK) {
-        // [MASTER] Applying cube_root to result
-        std::cout << "Received total value" << total_sum << std::endl;
-        total_sum = std::cbrt(total_sum);
-
-        // [MASTER] Storing result in the matrix
-        mtx.SetValue(row, col, total_sum);
+        // [ALL] Executing local DotProd
+        LocalDotProd(my_stuff.local_row, my_stuff.local_col, my_stuff.MyCount(), temp);
     }
 
-}
+    // [ALL] Sending/Receiving the results
+    double total_sum;
+    MPI_Reduce(&temp, &total_sum, 1, MPI_DOUBLE, MPI_SUM, MASTER_RANK, MPI_COMM_WORLD);
 
-// TODO DESCRIPTION
-inline void MPIWavefront(const int& my_rank, const int num_workers, DiagInfo& diag, SquareMtx& mtx,
-                  vec_int& row_counts, vec_int& row_displs,
-                  vec_int& col_counts, vec_int& col_displs,
-                  vec_double& local_row, vec_double& local_col,
-                  double& temp, double& total_sum) {
-
-    while(diag.num < mtx.length) {
-        if(my_rank == MASTER_RANK)
-            std::cout << "Computing diagonal " << diag.num << std::endl;
-        for(u64 elem = 1; elem <= diag.length; ++elem) {
-            if(my_rank == MASTER_RANK)
-                std::cout << "Computing elem " << elem << std::endl;
-            ComputeElem(my_rank, elem, diag, mtx, num_workers,
-                       row_counts, row_displs,
-                       col_counts, col_displs,
-                       local_row, local_col,
-                       temp, total_sum);
-        }
-
-        diag.PrepareNextDiagonal();
+    // [MASTER] Storing final result
+    if (my_stuff.AmIMaster()) {
+        // Applying cube_root to result
+        total_sum = std::cbrt(total_sum);
+        // Storing result in the matrix
+        mtx.SetValue(row, col, total_sum);
+        mtx.SetValue(col, row, total_sum);
     }
 }
 
 /**
+ * @brief Execute a Parallel execution of the Wavefront Pattern using MPI
+ * @param mtx_length = length of the matrix
+ * @param diag = object storing information regarding the current diagonal to compute
+ * @param my_stuff = contains arrays and params of the process
+ * @return
+ */
+inline SquareMtx* MPIWavefront(u64 mtx_length, DiagInfo& diag, MyInfo &my_stuff) {
+
+    SquareMtx* mtx;
+    // [MASTER] Initialize the matrix
+    if (my_stuff.AmIMaster())
+        mtx = new SquareMtx{mtx_length};
+    // [WORKERS] Create dummy matrix
+    else
+        mtx = new SquareMtx{1};
+
+    // [ALL] Start WaveFront Computation
+    while (diag.num < mtx_length) {
+        for (u64 elem = 1; elem <= diag.length; ++elem) {
+            ComputeElem(elem, diag, my_stuff, *mtx);
+        }
+        //MPI_Barrier(MPI_COMM_WORLD);
+        diag.PrepareNextDiagonal();
+    }
+
+    // [MASTER] Return matrix
+    if(my_stuff.AmIMaster())
+        return mtx;
+
+    // [WORKER] Return nothing (nullptr)
+    return nullptr;
+}
+
+/**
  * @brief A Parallel Wavefront Computation using MPI.
- * @param[in] argv[0] = the number of processes spawned by MPI
- * @param[in] argv[1] = the length of a row (or column) of the square matrix.
- * @param[in] argv[2] = the limit of the chunk_size for the
+ * @param[in] argv[0] = the length of a row (or column) of the square matrix.
  * @param[in] argc = number of cmd arguments.
  */
-int main(int argc, char* argv[]) {
-    // Setting Base Parameters
+int main(int argc, char *argv[]) {
+    // Setting mtx_length Parameters
     u64 mtx_length{default_length};
-    if (argc >= 2)      // If the user as passed its own lenght
-                        // for the matrix use it instead
-            mtx_length = std::stoul(argv[1]);
+    if (argc >= 2) // If the user as passed its own lenght
+                   // for the matrix use it instead
+        mtx_length = std::stoul(argv[1]);
 
-    // Initialize MPI and Setting MPI parameters
-    if ( MPI_Init(&argc, &argv) != MPI_SUCCESS) {
-        std::cerr<<"in MPI_Init"<<std::endl;
+    // [ALL] Initialize MPI
+    if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
+        std::cerr << "in MPI_Init" << std::endl;
         return EXIT_FAILURE;
     }
 
-    // Setting up common params
-    int my_rank{0};  int num_processes{0};
+    // [ALL] Setting up base params
+    int my_rank{0};
+    int num_processes{0};
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
-    DiagInfo diag(mtx_length, num_processes);
-    SquareMtx mtx; // BE AWARE: Only the Master will initialize it!
-    mtx.length = mtx_length;
-    vec_int row_counts(num_processes);
-    vec_int row_displs(num_processes);
-    vec_int col_counts(num_processes);
-    vec_int col_displs(num_processes);
-    vec_double local_row;
-    vec_double local_col;
-    double temp{0.0};
-    double total_sum{0.0};
+    MyInfo my_stuff{my_rank, num_processes, mtx_length - 1};
+    DiagInfo diag{mtx_length, num_processes};
 
     if (my_rank == MASTER_RANK)
-        std::cout << "Starting WaveFront Computation with:\n"
-                  << "num_processes = " << num_processes << "\n"
-                  << "mtx.length = " << mtx_length  << std::endl;
+        std::cout << "Starting MPI_WaveFront Computation with:\n"
+                  << "num_processes = " << my_stuff.num_processes << "\n"
+                  << "mtx.length = " << mtx_length << std::endl;
 
-    MPIWavefront(my_rank, num_processes, diag, mtx,
-                 row_counts, row_displs, col_counts, col_displs,
-                 local_row, local_col, temp, total_sum);
 
-    // Exiting the application
-    MPI_Barrier(MPI_COMM_WORLD);
+    // [ALL] Start Computation
+    const auto start = std::chrono::steady_clock::now();
+    const SquareMtx * mtx = MPIWavefront(mtx_length, diag, my_stuff);
+
+    // [MASTER] Print Matrix (only if <=32)
+    if(my_stuff.AmIMaster() && mtx != nullptr)
+        mtx->PrintMtx();
+
+    // [MASTER] Printing duration
+    if(my_stuff.AmIMaster()) {
+        const auto end = std::chrono::steady_clock::now();
+        const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        std::cout << "Time taken for MPI version: " << duration.count() << " milliseconds" << std::endl;
+    }
+    // [ALL] Closing MPI Communication and ending the program
     MPI_Finalize();
-
-    mtx.PrintMtx();
     return EXIT_SUCCESS;
 }
