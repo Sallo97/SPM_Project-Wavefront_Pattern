@@ -56,11 +56,11 @@ struct MyInfo {
             std::cout << x << " ";
 
         std::cout << "\nprinting local_row of Process " << my_rank << "\n";
-        for (int i = 0; i < MyCount(); ++i)
+        for (u64 i = 0; i < MyCount(); ++i)
             std::cout << local_row[i] << " ";
 
         std::cout << "\nprinting local_col of Process " << my_rank << "\n";
-        for (int i = 0; i < MyCount(); ++i)
+        for (u64 i = 0; i < MyCount(); ++i)
             std::cout << local_col[i] << " ";
         std::cout << std::endl;
     }
