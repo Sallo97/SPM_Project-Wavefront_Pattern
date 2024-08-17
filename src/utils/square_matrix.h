@@ -9,7 +9,6 @@
 #define SQUARE_MATRIX_H
 
 #include "constants.h"
-#include "elem_info.h"
 
 // Struct for our Square Matrix
 // The matrix is initialized as a matrix of size nxn s.t.
