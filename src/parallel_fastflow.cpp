@@ -21,7 +21,7 @@
 #include "./utils/square_matrix.h"
 #include "./utils/constants.h"
 #include "./utils/compute_elem.h"
-#include "./utils/ff_diag_info.h"
+#include "./utils/diag_info.h"
 
 /**
  * @brief Gives to the Worker the elements of the upper diagonal
@@ -31,9 +31,6 @@
  *        of elements it computed. When all elements have been
  *        computed the Emitter sends Tasks relative to the i+1
  *        diagonal.
- * Return Type: Task, it gives one to a Worker
- * Receiver Type: int, it gets one from a Worker.
- *                It represents the number of computed elements.
  */
 struct Emitter final: ff::ff_monode_t<u8, u8> {
     // Constructor
@@ -41,8 +38,7 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
         : mtx(mtx), diag(diag){send_tasks = true;}
 
     /**
-     * @brief This methods specifies what the Emitter will send to the Workers.
-     *        It will be executed at the start of the farm and each time a Worker
+     * @brief It will be executed at the start of the farm and each time a Worker
      *        returns a value through the Feedback Channel.
      * @param [in] task_done = the task object returned by the Worker
      */
@@ -77,9 +73,7 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
 
     /**
      * @brief Sends tasks (i.e. range of elems of mtx) to Workers to compute the
-     *        current diagonal. The elems are equally distributed among the threads,
-     *        determining it for every task dynamically each time a new Task is been computed
-
+     *        current diagonal.
      */
     void SendTasks() {
         // Setting base params
@@ -92,7 +86,7 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
             ff_send_out(id_chunk);
 
             // Updating params
-            if(elems_to_send <= diag.ff_chunk_size) // Hotfix to avoid out of bound
+            if(elems_to_send <= diag.ff_chunk_size) // Avoid out of bounds
                 elems_to_send = 0;
             else
                 elems_to_send -= diag.ff_chunk_size;
@@ -183,9 +177,29 @@ struct Worker final: ff::ff_node_t<u8> {
 };
 
 /**
+ * @brief Returns the num of workers to be used in the program.
+ * @param[in] argv[1] is the length a row (or a column) of the matrix
+ * @param[in] argc = the number of cmd arguments.
+ * @note If no argument is passed, then we assume the matrix has default length
+ */
+u8 SetNumWorkers(const int argc, char* argv[]) {
+    // Checking if the value has been passed in the CMD
+    if (argc >=3)
+        return std::stoul(argv[2]);
+
+    // If not try to use the maximum capacity of the Hardware
+    else if(std::thread::hardware_concurrency() > 0)
+        return std::thread::hardware_concurrency() -1; // One thread is for the Emitter
+
+    // If not use the default value
+        return default_workers;
+}
+
+/**
  * @brief A Parallel Wavefront Computation using the library FastFlow.
  *        It uses a Farm with Feedback Channels.
- * @param[in] argv[1] is the length a row (or a column) of the matrix
+ * @param[in] argv[1] is the length a row (or a column) of the matrix (OPTIONAL)
+ * @param[in] argv[2] is the number of workers (OPTIONAL)
  * @param[in] argc = the number of cmd arguments.
  * @note If no argument is passed, then we assume the matrix has default length
  */
@@ -193,16 +207,10 @@ int main(const int argc, char* argv[]) {
     // Setting matrix length
     u64 mtx_length{default_length};
     if (argc >= 2) // If the user as passed its own lenght
-        // for the matrix use it instead
-            mtx_length = std::stoul(argv[1]);
+                   // for the matrix use it instead
+        mtx_length = std::stoul(argv[1]);
 
-    // Setting the num of Workers
-    u8 num_workers{default_workers};
-    if(std::thread::hardware_concurrency() > 0)
-        num_workers = std::thread::hardware_concurrency() -1; // One thread is for the Emitter
-    if (argc >=3)                                            // If the user passed its own num of
-        // Workers use it instead
-            num_workers = std::stoul(argv[2]);
+    const u8 num_workers = SetNumWorkers(argc, argv);
 
     std::cout << "mtx_lenght = " << mtx_length << "\n"
               << "hardware_concurrency = " << std::thread::hardware_concurrency() << "\n"
@@ -238,6 +246,8 @@ int main(const int argc, char* argv[]) {
     }
 
     const auto end = std::chrono::steady_clock::now();
+
+    // Printing duration and closing program
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Time taken for FastFlown version: " << duration.count() << " milliseconds" << std::endl;
     mtx.PrintMtx();
