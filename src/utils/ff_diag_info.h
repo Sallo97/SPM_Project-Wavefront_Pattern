@@ -52,7 +52,7 @@ struct DiagInfo {
 
     // PARAMETERS
     const int num_workers;
-    u64 ff_chunk_size{0}; // TODO CHANGE IT TO FF CHUNK SIZE
+    u64 ff_chunk_size{0};
     u64 mpi_chunk_size{0};
     u64 num{0}; // The current diagonal.
     u64 length{0}; // Number of elements of the curr. diagonal.
