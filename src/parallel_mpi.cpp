@@ -199,6 +199,10 @@ int main(int argc, char *argv[]) {
         const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         std::cout << "Time taken for MPI version: " << duration.count() << " milliseconds" << std::endl;
     }
+
+    // [ALL] Deleting SquareMatrix pointer
+    delete mtx;
+
     // [ALL] Closing MPI Communication and ending the program
     MPI_Finalize();
     return EXIT_SUCCESS;
