@@ -33,9 +33,9 @@ struct DiagInfo {
      *        chunk_size = upper_integer_part(diagonal_length / num_workers)
      */
     void ComputeFFChunkSize() {
-        chunk_size = std::ceil((static_cast<double>(length) / static_cast<double>(num_workers)));
-        if (chunk_size == 0)
-            chunk_size = 1;
+        ff_chunk_size = std::ceil((static_cast<double>(length) / static_cast<double>(num_workers)));
+        if (ff_chunk_size == 0)
+            ff_chunk_size = 1;
     }
 
     /**
@@ -52,7 +52,7 @@ struct DiagInfo {
 
     // PARAMETERS
     const int num_workers;
-    u64 chunk_size{0}; // TODO CHANGE IT TO FF CHUNK SIZE
+    u64 ff_chunk_size{0}; // TODO CHANGE IT TO FF CHUNK SIZE
     u64 mpi_chunk_size{0};
     u64 num{0}; // The current diagonal.
     u64 length{0}; // Number of elements of the curr. diagonal.
