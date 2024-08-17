@@ -20,15 +20,12 @@
 /**
  * @brief Apply the WaveFront Computation.
  *        For all elements in diagonal above the major diagonal
- *        it computes them s.t. mtx[i][j] =
- *                                     cube_root(DotProduct(v_m, v_(m+k))
+ *        it computes them s.t. mtx[i][j] = cube_root(DotProduct(v_m, v_(m+k))
  * @param[out] mtx = the reference to the matrix to initialize.
  */
-inline void ComputeMatrix(SquareMtx& mtx) {
-    double temp{0.0}; // Stores the results of
-                      // the DotProduct computations.
-    u64 length{mtx.length};    // Stores the number of elements
-                                // in each diagonal
+inline void ComputeMatrix(const SquareMtx& mtx) {
+    double temp{0.0}; // Stores the results of the DotProduct computations.
+    u64 length{mtx.length};    // Stores the number of elements in each diagonal
 
     for (u64 diag = 1; diag < mtx.length; ++diag) { // We assume the major diagonal has number 0
         length--;
@@ -60,7 +57,7 @@ int main(const int argc, char *argv[]) {
         mtx_length = std::stoull(argv[1]);
 
     // Initialize Matrix
-    SquareMtx mtx(mtx_length);
+    const SquareMtx mtx(mtx_length);
 
     // Beginning WaveFront Pattern
     const auto start = std::chrono::steady_clock::now();
@@ -72,6 +69,7 @@ int main(const int argc, char *argv[]) {
     const auto end = std::chrono::steady_clock::now();
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
+    // Printing duration and closing program
     std::cout << "Time taken for sequential version: " << duration.count() << " milliseconds" << std::endl;
     return EXIT_SUCCESS;
 }
