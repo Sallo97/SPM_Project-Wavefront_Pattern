@@ -31,7 +31,7 @@ struct SquareMtx {
         if(length == 0) {
             std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
         }
-        data = new std::vector<double>(length, 0.0);
+        data = new std::vector<double>(length*length, 0.0);
     }
 
     /**
@@ -58,7 +58,7 @@ struct SquareMtx {
     */
     void InitializeMatrix() {
         AllocateData();
-        for(u64 m{0}; m < length; ++m)
+        for(u64 m = 0; m < length; ++m)
             (*data)[ (m * length) + m ] = static_cast<double>(m + 1)/ static_cast<double>(length) ;
     }
 
@@ -90,27 +90,12 @@ struct SquareMtx {
         * @param[in] col = the column index of the cell.
         * @param[in] val = the value to set in mtx[row][col]
     */
-    void SetValue(u64 row, const u64 col, const double val) {
+    void SetValue(u64 row, const u64 col, const double val) const {
         if(length == 0) {
             std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
             return;
         }
         (*data)[GetIndex(row, col)] = val;
-    }
-
-    /**
-    * @brief Does mtx[row][col] = val. The main difference is that
-    *        here we pass a ElemInfo obj
-    * @param[in] elem = reference containing informations
-    *                   regarding the element
-    * @param[in] val = the value to store
-    */
-    void SetValue(const ElemInfo& elem, const double val) {
-        if(length == 0) {
-            std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
-            return;
-        }
-        (*data)[GetIndex(elem.row, elem.col)] = val;
     }
 
     /**
@@ -138,7 +123,7 @@ struct SquareMtx {
         * @brief DEBUG function, fills the matrix with
         *        s.t. ∀ mtx[i][j] = j
     */
-    void FillMatrix() {
+    void FillMatrix() const {
         if(length == 0) {
             std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
             return;
