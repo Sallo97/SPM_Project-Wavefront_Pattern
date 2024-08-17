@@ -1,6 +1,9 @@
-//
-// Created by Salvatore Salerno on 17/08/24.
-//
+/**
+* @file mpi_myinfo.h
+ * @brief The MyInfo class used in the MPI Implementation.
+ *        It contains parameters local to each process.
+ * @author Salvatore Salerno
+ */
 
 #ifndef MPI_MYINFO_H
 #define MPI_MYINFO_H
