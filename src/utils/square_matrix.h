@@ -20,8 +20,18 @@ struct SquareMtx {
     SquareMtx()= default;
 
     explicit SquareMtx(const u64& length)
-        :data(length*length, 0), length(length) {
+        :length(length) {
         InitializeMatrix();
+    }
+
+    /**
+        * @brief allocated the data buffer with length elements
+    */
+    void AllocateData() {
+        if(length == 0) {
+            std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
+        }
+        data = new std::vector<double>(length, 0.0);
     }
 
     /**
@@ -47,18 +57,18 @@ struct SquareMtx {
         * @brief Initialize the matrix with the length it has.
     */
     void InitializeMatrix() {
+        AllocateData();
         for(u64 m{0}; m < length; ++m)
-            data[ (m * length) + m ] = static_cast<double>(m + 1)/ static_cast<double>(length) ;
+            (*data)[ (m * length) + m ] = static_cast<double>(m + 1)/ static_cast<double>(length) ;
     }
 
     /**
-        * @brief Initialize the matrix with the given length
-        * @param[in] val = the new value of the length
-    */
-    void InitializeMatrix(u64 val) const {
-        if(length > 0)
-            std::cerr << "ERROR!!! Cannot change the row lenght when it "
-                      << "has already been initialized" << std::endl;
+    * @brief Initialize the matrix with the length it has.
+*/
+    void InitializeMatrix(u64 length) {
+        AllocateData();
+        for(u64 m{0}; m < length; ++m)
+            (*data)[ (m * length) + m ] = static_cast<double>(m + 1)/ static_cast<double>(length) ;
     }
 
     /**
@@ -71,7 +81,7 @@ struct SquareMtx {
             std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
             return -1.0;
         }
-        return data[GetIndex(row, col)];
+        return (*data)[GetIndex(row, col)];
     }
 
     /**
@@ -85,7 +95,7 @@ struct SquareMtx {
             std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
             return;
         }
-        data[GetIndex(row, col)] = val;
+        (*data)[GetIndex(row, col)] = val;
     }
 
     /**
@@ -100,7 +110,7 @@ struct SquareMtx {
             std::cerr << "ERROR!!!! Matrix not initialized" << std::endl;
             return;
         }
-        data[GetIndex(elem.row, elem.col)] = val;
+        (*data)[GetIndex(elem.row, elem.col)] = val;
     }
 
     /**
@@ -119,7 +129,7 @@ struct SquareMtx {
         std::cout << "\n";
         for(u64 i = 0; i < length; ++i) {
             for(u64 j = 0; j < length; ++j)
-                std::cout << data[GetIndex(i, j)] << " ";
+                std::cout << (*data)[GetIndex(i, j)] << " ";
             std::cout << "\n";
         }
     }
@@ -140,7 +150,7 @@ struct SquareMtx {
     }
 
     // Parameters
-    std::vector<double> data;
+    std::vector<double>* data{nullptr};
     u64 length{0};
 };
 #endif //SQUARE_MATRIX_H
