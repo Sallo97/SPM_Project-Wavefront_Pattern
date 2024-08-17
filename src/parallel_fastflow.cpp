@@ -92,10 +92,10 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
             ff_send_out(id_chunk);
 
             // Updating params
-            if(elems_to_send <= diag.chunk_size) // Hotfix to avoid out of bound
+            if(elems_to_send <= diag.ff_chunk_size) // Hotfix to avoid out of bound
                 elems_to_send = 0;
             else
-                elems_to_send -= diag.chunk_size;
+                elems_to_send -= diag.ff_chunk_size;
             active_workers ++;
         }
 
@@ -141,8 +141,8 @@ struct Worker final: ff::ff_node_t<u8> {
     void ComputeChunk() {
         // Determining the range
         // Be aware that elements start at position 1
-        start_range = ((id_chunk - 1) * diag.chunk_size) + 1;
-        end_range = start_range + (diag.chunk_size - 1);
+        start_range = ((id_chunk - 1) * diag.ff_chunk_size) + 1;
+        end_range = start_range + (diag.ff_chunk_size - 1);
         if (end_range > diag.length || id_chunk == diag.num_workers) // Hotfix Out of Bounds
             end_range = diag.length;
 
