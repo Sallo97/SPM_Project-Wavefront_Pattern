@@ -199,7 +199,7 @@ struct Worker final: ff::ff_node_t<u8> {
  * @param[in] argc = the number of cmd arguments.
  * @note If no argument is passed, then we assume the matrix has default length
  */
-u8 SetNumWorkers(const int argc, char* argv[]) {
+inline u8 SetNumThreads(const int argc, char* argv[]) {
     // Checking if the value has been passed in the CMD
     if (argc >=3)
         return std::stoul(argv[2]);
@@ -227,7 +227,7 @@ int main(const int argc, char* argv[]) {
                    // for the matrix use it instead
         mtx_length = std::stoul(argv[1]);
 
-    const u8 num_threads = SetNumWorkers(argc, argv);
+    const u8 num_threads = SetNumThreads(argc, argv);
 
     std::cout << "mtx_lenght = " << mtx_length << "\n"
               << "hardware_concurrency = " << std::thread::hardware_concurrency() << "\n"
