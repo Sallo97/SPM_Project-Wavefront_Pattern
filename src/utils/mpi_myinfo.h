@@ -59,11 +59,11 @@ struct MyInfo {
             std::cout << x << " ";
 
         std::cout << "\nprinting local_row of Process " << my_rank << "\n";
-        for (u64 i = 0; i < MyCount(); ++i)
+        for (int i = 0; i < MyCount(); ++i)
             std::cout << local_row[i] << " ";
 
         std::cout << "\nprinting local_col of Process " << my_rank << "\n";
-        for (u64 i = 0; i < MyCount(); ++i)
+        for (int i = 0; i < MyCount(); ++i)
             std::cout << local_col[i] << " ";
         std::cout << std::endl;
     }
@@ -73,7 +73,7 @@ struct MyInfo {
      *        It is the value stored in the associated entry in counts
      *
      */
-    [[nodiscard]] u64 MyCount() const {
+    [[nodiscard]] int MyCount() const {
         return counts[my_rank];
     }
 
