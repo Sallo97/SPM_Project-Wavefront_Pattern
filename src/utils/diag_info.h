@@ -23,7 +23,7 @@ struct DiagInfo {
      * @param[in] base_length = the length of the matrix.
      * @param[in] num_workers = the number of Workers in execution.
      */
-    explicit DiagInfo(const u64 base_lenght, const int num_workers) : num_workers(num_workers), length(base_lenght) {
+    explicit DiagInfo(const u64 base_length, const int num_workers) : num_actors(num_workers), length(base_length) {
         PrepareNextDiagonal();
     }
 
@@ -43,7 +43,7 @@ struct DiagInfo {
      *        chunk_size = upper_integer_part(diagonal_length / num_workers)
      */
     void ComputeFFChunkSize() {
-        ff_chunk_size = std::ceil((static_cast<double>(length) / static_cast<double>(num_workers)));
+        ff_chunk_size = std::ceil((static_cast<double>(length) / static_cast<double>(num_actors)));
         if (ff_chunk_size == 0)
             ff_chunk_size = 1;
     }
@@ -55,13 +55,13 @@ struct DiagInfo {
      *              the current diagonal
      */
     void ComputeMPIChunkSize() {
-        mpi_chunk_size = std::ceil((static_cast<double>(num) / static_cast<double>(num_workers)));
+        mpi_chunk_size = std::ceil((static_cast<double>(num) / static_cast<double>(num_actors)));
         if (mpi_chunk_size == 0)
             mpi_chunk_size = 1;
     }
 
     // PARAMETERS
-    const int num_workers;
+    const int num_actors;
     u64 ff_chunk_size{0};
     u64 mpi_chunk_size{0};
     u64 num{0};    // Number of the current diagonal. The major diagonal is counted as 0.
