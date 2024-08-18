@@ -23,6 +23,48 @@
 #include "./utils/compute_elem.h"
 #include "./utils/diag_info.h"
 
+
+/**
+ * @brief Computes a given chunks of elements of the matrix
+ *        following the Wavefront Computation
+ * @param id_chunk = recognizes which range of the elems to compute
+ * @param diag = obj containing information regarding the current diagonal
+ * @param mtx = the matrix where to gather and store result
+ */
+inline void ComputeChunk(const int id_chunk, const DiagInfo& diag, const SquareMtx& mtx) {
+    // Determining the range
+    // Be aware that elements start at position 1
+    u64 start_range = ((id_chunk - 1) * diag.ff_chunk_size) + 1;
+    u64 end_range = start_range + (diag.ff_chunk_size - 1);
+    if (end_range > diag.length || id_chunk == diag.num_actors) // Hotfix Out of Bounds
+        end_range = diag.length;
+
+    // If start_range is out of bounds skip computation
+    if (start_range > diag.length)
+        return;
+
+    // Starting Computation
+    double temp = 0.0;
+    while(start_range <= end_range){
+
+        // Determining element
+        // ElemInfo curr_elem{mtx.length, num_diag, start_range};
+        u64 row = start_range - 1;
+        u64 col = row + diag.num;
+
+        // Computing element
+        ComputeElement(mtx, row, col, diag.num, temp);
+
+        // Storing the result
+        mtx.SetValue(row, col, temp);
+        mtx.SetValue(col, row, temp);
+
+        // Setting next element to compute
+        ++start_range;
+    }
+}
+
+
 /**
  * @brief Gives to the Worker the elements of the upper diagonal
  *        to compute following the Wavefront Pattern.
@@ -34,8 +76,8 @@
  */
 struct Emitter final: ff::ff_monode_t<u8, u8> {
     // Constructor
-    explicit Emitter(SquareMtx &mtx, DiagInfo& diag)
-        : mtx(mtx), diag(diag){send_tasks = true;}
+    explicit Emitter(SquareMtx &mtx, DiagInfo& diag, const u8 num_workers)
+        : num_workers(num_workers), mtx(mtx), diag(diag){send_tasks = true;}
 
     /**
      * @brief It will be executed at the start of the farm and each time a Worker
@@ -66,8 +108,12 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
         // Computing a new diagonal by sending Tasks to Workers
         if(send_tasks) {
             SendTasks();
-            //TODO fai fare un task all'Emitter per non fargli fare attesa attiva
+
+            // Compute its part (if it has any)
+            if(id_emitter != -1)
+                ComputeChunk(id_emitter, diag, mtx);
         }
+
         return GO_ON;
     }
 
@@ -80,7 +126,7 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
         u64 elems_to_send = diag.length;
 
         // Sending tasks until all elements of the matrix have been distributed
-        while(elems_to_send > 0 && active_workers < diag.num_workers) {
+        while(elems_to_send >= diag.ff_chunk_size && active_workers < num_workers) {
             // Sending tasks
             auto* id_chunk = new u8{static_cast<u8>(active_workers + 1)};
             ff_send_out(id_chunk);
@@ -93,13 +139,21 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
             active_workers ++;
         }
 
+        // Setting id_chunk for the Emitter
+        if(elems_to_send == 0)
+            id_emitter = -1;
+        else
+            id_emitter = active_workers + 1;
+
         // Update flag to be aware that for the current diagonal all tasks have been sent
         send_tasks = false;
     }
 
     // Parameters
     bool send_tasks{false};      // Tells if we have to send tasks to Workers.
-    u8 active_workers{0};        // Workers doing a computation
+    int id_emitter{0};           // Indicates which part of the diagonal the Emitter needs to compute
+    u8 active_workers{0};        // Active workers doing a computation
+    u8 num_workers{0};           // Total workers in the farm
     SquareMtx& mtx;              // Reference to the matrix to compute.
     DiagInfo& diag;              // Contains informations for what and when
                                  // to send tasks to Workers
@@ -122,47 +176,10 @@ struct Worker final: ff::ff_node_t<u8> {
         id_chunk = *task;
 
         // Computing elemes
-        ComputeChunk();
+        ComputeChunk(id_chunk, diag, mtx);
 
         // Discarding arrived token and sending a new one
         return task;
-    }
-
-    /**
-     * @brief Computes a given chunks of elements of the matrix
-     *        following the Wavefront Computation
-     */
-    void ComputeChunk() {
-        // Determining the range
-        // Be aware that elements start at position 1
-        start_range = ((id_chunk - 1) * diag.ff_chunk_size) + 1;
-        end_range = start_range + (diag.ff_chunk_size - 1);
-        if (end_range > diag.length || id_chunk == diag.num_workers) // Hotfix Out of Bounds
-            end_range = diag.length;
-
-        // If start_range is out of bounds skip computation
-        if (start_range > diag.length)
-            return;
-
-        // Starting Computation
-        temp = 0.0;
-        while(start_range <= end_range){
-
-            // Determining element
-            // ElemInfo curr_elem{mtx.length, num_diag, start_range};
-            u64 row = start_range - 1;
-            u64 col = row + diag.num;
-
-            // Computing element
-            ComputeElement(mtx, row, col, diag.num, temp);
-
-            // Storing the result
-            mtx.SetValue(row, col, temp);
-            mtx.SetValue(col, row, temp);
-
-            // Setting next element to compute
-            ++start_range;
-        }
     }
 
     // PARAMS
@@ -188,8 +205,8 @@ u8 SetNumWorkers(const int argc, char* argv[]) {
         return std::stoul(argv[2]);
 
     // If not try to use the maximum capacity of the Hardware
-    else if(std::thread::hardware_concurrency() > 0)
-        return std::thread::hardware_concurrency() -1; // One thread is for the Emitter
+    if(std::thread::hardware_concurrency() > 0)
+        return std::thread::hardware_concurrency();
 
     // If not use the default value
     return default_workers;
@@ -210,25 +227,25 @@ int main(const int argc, char* argv[]) {
                    // for the matrix use it instead
         mtx_length = std::stoul(argv[1]);
 
-    const u8 num_workers = SetNumWorkers(argc, argv);
+    const u8 num_threads = SetNumWorkers(argc, argv);
 
     std::cout << "mtx_lenght = " << mtx_length << "\n"
               << "hardware_concurrency = " << std::thread::hardware_concurrency() << "\n"
-              << "num_workers = " << static_cast<int>(num_workers) << std::endl;
+              << "num_threads = " << static_cast<int>(num_threads) << std::endl;
 
     // Initialize Matrix and Diag
     SquareMtx mtx{mtx_length};
-    DiagInfo diag{mtx.length, num_workers};
+    DiagInfo diag{mtx.length, num_threads};
 
     // Creating a Farm with Feedback Channels and no Collector
-    Emitter emt{mtx, diag};
+    Emitter emt{mtx, diag, static_cast<u8>(num_threads - 1)};
     ff::ff_Farm<> farm(
-            [&]() {
+            [&](int num_workers) {
             std::vector<std::unique_ptr<ff::ff_node>> workers;
             for(size_t i=0; i < num_workers; ++i)
                 workers.push_back(std::make_unique<Worker>(mtx, diag));
             return workers;
-        }(),
+        }(num_threads - 1),
         emt);
     farm.remove_collector();
     farm.wrap_around();
