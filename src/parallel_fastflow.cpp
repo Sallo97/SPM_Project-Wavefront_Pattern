@@ -240,9 +240,9 @@ int main(const int argc, char* argv[]) {
     // Creating a Farm with Feedback Channels and no Collector
     Emitter emt{mtx, diag, static_cast<u8>(num_threads - 1)};
     ff::ff_Farm<> farm(
-            [&](int num_workers) {
+            [&](const u8 num_workers) {
             std::vector<std::unique_ptr<ff::ff_node>> workers;
-            for(size_t i=0; i < num_workers; ++i)
+            for(u8 i=0; i < num_workers; ++i)
                 workers.push_back(std::make_unique<Worker>(mtx, diag));
             return workers;
         }(num_threads - 1),
