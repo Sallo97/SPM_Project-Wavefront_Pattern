@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "utils/constants.h"
-#include "utils/ff_diag_info.h"
+#include "utils/diag_info.h"
 #include "utils/mpi_myinfo.h"
 #include "utils/square_matrix.h"
 
@@ -16,7 +16,7 @@
  * @param length[in] = length of the two vectors
  * @param temp[out] = where to store the computation
  */
-void LocalDotProd(const std::vector<double>& vec_row, const std::vector<double>& vec_col, u64 length, double& temp) {
+void LocalDotProd(const std::vector<double>& vec_row, const std::vector<double>& vec_col, const u64 length, double& temp) {
     temp = 0.0;
     for (u64 i = 0; i < length; ++i)
         temp += vec_row[i] * vec_col[i];
@@ -92,14 +92,14 @@ inline void ComputeElem(const u64 num_elem, const DiagInfo & diag, MyInfo &my_st
     SetScatterArrays(diag, mtx, row, col, my_stuff);
 
     // [ALL] Determining if I have to do a LocalDotProduct Computation i.e. if my cell in counts is > 0
-    if (const int local_count = my_stuff.counts[my_stuff.my_rank]; local_count != 0) {
+    if (my_stuff.MyCount() != 0) {
         // [ALL] Retrieving row vector
         MPI_Scatterv(mtx.data->data(), my_stuff.counts.data(), my_stuff.row_displs.data(), MPI_DOUBLE,
-                     my_stuff.local_row.data(), local_count, MPI_DOUBLE, MASTER_RANK, MPI_COMM_WORLD);
+                     my_stuff.local_row.data(), my_stuff.MyCount(), MPI_DOUBLE, MASTER_RANK, MPI_COMM_WORLD);
 
         // [ALL] Retrieving col vector
         MPI_Scatterv(mtx.data->data(), my_stuff.counts.data(), my_stuff.col_displs.data(), MPI_DOUBLE,
-                     my_stuff.local_col.data(), local_count, MPI_DOUBLE, MASTER_RANK, MPI_COMM_WORLD);
+                     my_stuff.local_col.data(), my_stuff.MyCount(), MPI_DOUBLE, MASTER_RANK, MPI_COMM_WORLD);
 
         // [ALL] Executing local DotProd
         LocalDotProd(my_stuff.local_row, my_stuff.local_col, my_stuff.MyCount(), temp);
@@ -126,7 +126,7 @@ inline void ComputeElem(const u64 num_elem, const DiagInfo & diag, MyInfo &my_st
  * @param my_stuff = contains arrays and params of the process
  * @return
  */
-inline SquareMtx* MPIWavefront(u64 mtx_length, DiagInfo& diag, MyInfo &my_stuff) {
+inline SquareMtx* MPIWavefront(const u64 mtx_length, DiagInfo& diag, MyInfo &my_stuff) {
 
     SquareMtx* mtx;
     // [MASTER] Initialize the matrix
@@ -141,7 +141,6 @@ inline SquareMtx* MPIWavefront(u64 mtx_length, DiagInfo& diag, MyInfo &my_stuff)
         for (u64 elem = 1; elem <= diag.length; ++elem) {
             ComputeElem(elem, diag, my_stuff, *mtx);
         }
-        //MPI_Barrier(MPI_COMM_WORLD);
         diag.PrepareNextDiagonal();
     }
 
@@ -161,7 +160,7 @@ inline SquareMtx* MPIWavefront(u64 mtx_length, DiagInfo& diag, MyInfo &my_stuff)
 int main(int argc, char *argv[]) {
     // Setting mtx_length Parameters
     u64 mtx_length{default_length};
-    if (argc >= 2) // If the user as passed its own lenght
+    if (argc == 2) // If the user as passed its own lenght
                    // for the matrix use it instead
         mtx_length = std::stoul(argv[1]);
 
@@ -188,10 +187,6 @@ int main(int argc, char *argv[]) {
     // [ALL] Start Computation
     const auto start = std::chrono::steady_clock::now();
     const SquareMtx * mtx = MPIWavefront(mtx_length, diag, my_stuff);
-
-    // [MASTER] Print Matrix (only if <=32)
-    if(my_stuff.AmIMaster() && mtx != nullptr)
-        mtx->PrintMtx();
 
     // [MASTER] Printing duration
     if(my_stuff.AmIMaster()) {
