@@ -125,19 +125,28 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
         // Setting base params
         u64 elems_to_send = diag.length;
 
+        u64 chunk_size = diag.ff_chunk_size;
+
         // Sending tasks until all elements of the matrix have been distributed
-        while(elems_to_send >= diag.ff_chunk_size && active_workers < num_workers) {
+        while(elems_to_send >= chunk_size && active_workers < num_workers) {
             // Sending tasks
             auto* id_chunk = new u8{static_cast<u8>(active_workers + 1)};
             ff_send_out(id_chunk);
 
             // Updating params
-            if(elems_to_send <= diag.ff_chunk_size) // Avoid out of bounds
+            if(elems_to_send <= chunk_size) // Avoid out of bounds
                 elems_to_send = 0;
             else
-                elems_to_send -= diag.ff_chunk_size;
+                elems_to_send -= chunk_size;
             active_workers ++;
+
+#ifndef DYNAMIC_CHUNK
+            chunk_size = static_cast<u64>(std::ceil(elems_to_send / (num_workers - active_workers)+1)  ));
+            if(chunk_size == 0) // Out of Bounds fix
+                chunk_size = 1;
+            std::cout << "dynamic_chunk_size = " << chunk_size << std::endl;
         }
+#endif // DYNAMIC_CHUNK
 
         // Setting id_chunk for the Emitter
         if(elems_to_send == 0)
@@ -147,6 +156,7 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
 
         // Update flag to be aware that for the current diagonal all tasks have been sent
         send_tasks = false;
+
     }
 
     // Parameters
