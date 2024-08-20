@@ -23,7 +23,7 @@
  *        it computes them s.t. mtx[i][j] = cube_root(DotProduct(v_m, v_(m+k))
  * @param[out] mtx = the reference to the matrix to initialize.
  */
-inline void ComputeMatrix(const SquareMtx& mtx) {
+inline void ComputeMatrix(SquareMtx& mtx) {
     double temp{0.0}; // Stores the results of the DotProduct computations.
     u64 length{mtx.length};    // Stores the number of elements in each diagonal
 
@@ -57,7 +57,7 @@ int main(const int argc, char *argv[]) {
         mtx_length = std::stoull(argv[1]);
 
     // Initialize Matrix
-    const SquareMtx mtx(mtx_length);
+    SquareMtx mtx(mtx_length);
 
     // Beginning WaveFront Pattern
     const auto start = std::chrono::steady_clock::now();
