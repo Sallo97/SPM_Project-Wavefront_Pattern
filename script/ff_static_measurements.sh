@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name = ff_measurements
-#SBATCH --output = ../results/fastflow/ff_%A_%a.out
-#SBATCH --error = ../results/fastflow/error_ff_%A_%a.err
+#SBATCH --output = ../results/fastflow_static/ff_%A_%a.out
+#SBATCH --error = ../results/fastflow_static/error_ff_%A_%a.err
 #SBATCH --time = 02:00:00 #2hr (hrs:min:sec)
 
 # Case 4 threads

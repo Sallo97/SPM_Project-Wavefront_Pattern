@@ -1,14 +1,15 @@
 #!/bin/bash
-# Set the variables from command-line arguments
-#SBATCH --partition=normal
-#SBATCH --job-name=parallel_mpi
-#SBATCH -o ../results/%j.log
-#SBATCH -e ../results/%j.err
-#SBATCH --time=00:30:00
-#SBATCH --ntasks-per-node=1
-PROBLEM_SIZE=4096
+#SBATCH --job-name = mpi_measurements
+#SBATCH --output = ../results/mpi/mpi_%A_%a.out
+#SBATCH --error = ../results/mpi/error_mpi_%A_%a.err
+#SBATCH --time = 02:00:00 #2hr (hrs:min:sec)
 
-srun /bin/hostname
-
-# Run the MPI program with the specified problem size
-mpirun -map-by ppr:1:node --report-bindings ../build/src/pasrallel_mpi $PROBLEM_SIZE
+# Number of execution of the program
+num_execution=10
+start_val=64 #from 64 to 32'768
+for i in $(seq 0 $((num_execution-1)))
+do
+  arg=$((start_val * (2 ** i)))
+  echo "MPI execution with argument: $arg"
+  mpirun ../build/src/parallel_mpi $arg
+done
