@@ -15,7 +15,6 @@ using vec_int = std::vector<int>;
 using vec_double = std::vector<double>;
 constexpr u64 default_length = 1 << 12;  // it is read as "2^12"
 constexpr u8 default_workers = 8;
-constexpr u64 default_chunk_size = 512;
-constexpr int MASTER_RANK{0};
+constexpr int PRINCIPAL_RANK = 0;
 
 #endif //CONSTANTS_H
