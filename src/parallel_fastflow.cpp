@@ -18,7 +18,6 @@
 #include <vector>
 #include "../include/ff/ff.hpp"
 #include "../include/ff/farm.hpp"
-#include "../include/ff/ff.hpp"
 #include "./utils/compute_range.h"
 #include "./utils/constants.h"
 #include "./utils/diag_info.h"
@@ -121,14 +120,15 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
                 elems_to_send -= chunk_size;
             active_workers++;
 
-#ifndef DYNAMIC_CHUNK
+#ifdef DYNAMIC_CHUNK
+            // Recomputes dynamically the chunk_size
             chunk_size = static_cast<u64>(std::ceil(elems_to_send / (num_workers - active_workers) + 1));
             if (chunk_size == 0) // Out of Bounds fix
                 chunk_size = 1;
-            std::cout << "dynamic_chunk_size = " << chunk_size << std::endl;
-        }
+            std::cout << "updated chunk_size = " << chunk_size << std::endl;
 #endif // DYNAMIC_CHUNK
 
+        }
         // Setting id_chunk for the Emitter
         if (elems_to_send == 0)
             id_emitter = -1;
@@ -173,8 +173,7 @@ struct Worker final : ff::ff_node_t<u8> {
 
     // PARAMS
     SquareMtx &mtx; // Reference of the matrix to compute
-    DiagInfo &diag; // Contains informations updated by the Emitter regarding
-                    // the diagonal to compute
+    DiagInfo &diag; // Contains informations updated by the Emitter regarding the diagonal to compute
     u8 id_chunk{0}; // Identifies which chunk of elems the Worker will compute, id_chunk in [1, num_workers]
     u64 start_range{0}; // Value used during a diag computation for telling the first element of the range
     u64 end_range{0}; // Value used during a diag computation for telling the last element of the range
