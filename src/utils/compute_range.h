@@ -2,8 +2,8 @@
 // Created by Salvatore Salerno on 19/08/24.
 //
 
-#ifndef COMPUTE_CHUNK_H
-#define COMPUTE_CHUNK_H
+#ifndef COMPUTE_RANGE_H
+#define COMPUTE_RANGE_H
 
 #include "compute_elem.h"
 
@@ -15,7 +15,7 @@
  * @param num_diag = number of the diagonal
  * @param mtx = obj storing the matrix
  */
-inline void ComputeRange(u64 start_range, u64 end_range, u64 length, u64 num_diag, SquareMtx& mtx) {
+inline void ComputeRange(u64 start_range, const u64 end_range, const u64 length, const u64 num_diag, SquareMtx& mtx) {
     // If start_range is out of bounds skip computation
     if (start_range > length)
         return;
@@ -30,17 +30,15 @@ inline void ComputeRange(u64 start_range, u64 end_range, u64 length, u64 num_dia
         u64 col = row + num_diag;
 
         // Computing element
-        if(mtx.GetValue(row, col) == 0) {
+        if(!mtx.IsElemAlreadyDone(row, col)) {
             ComputeElement(mtx, row, col, num_diag, temp);
-
             // Storing the result
             mtx.SetValue(row, col, temp);
         }
-
 
         // Setting next element to compute
         ++start_range;
     }
 }
 
-#endif //COMPUTE_CHUNK_H
+#endif //COMPUTE_RANGE_H
