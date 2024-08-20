@@ -35,7 +35,6 @@ struct DiagInfo {
         num++;
         length--;
         ComputeFFChunkSize();
-        ComputeMPIChunkSize();
     }
 
     /**
@@ -46,18 +45,6 @@ struct DiagInfo {
         ff_chunk_size = std::ceil((static_cast<double>(length) / static_cast<double>(num_actors)));
         if (ff_chunk_size == 0)
             ff_chunk_size = 1;
-    }
-
-    /**
-     * @brief Sets the chunk size used in the MPI case.
-     *        chunk_size = upper_integer_part(row_or_col_vector / num_workers)
-     *        Note: the length of a vector of the DotProduct equals to the number of
-     *              the current diagonal
-     */
-    void ComputeMPIChunkSize() {
-        mpi_chunk_size = std::ceil((static_cast<double>(num) / static_cast<double>(num_actors)));
-        if (mpi_chunk_size == 0)
-            mpi_chunk_size = 1;
     }
 
     // PARAMETERS
