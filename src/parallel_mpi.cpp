@@ -266,7 +266,7 @@ int main(int argc, char *argv[]) {
         num_nodes = static_cast<int>(mtx_length);
     }
 
-    if (my_rank == MASTER_RANK)
+    if (my_rank == PRINCIPAL_RANK)
         std::cout << "Starting MPI_WaveFront Computation with:\n"
                   << "num_nodes = " << num_nodes << "\n"
                   << "mtx.length = " << mtx_length << std::endl;
