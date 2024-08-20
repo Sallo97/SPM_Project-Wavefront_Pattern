@@ -1,5 +1,5 @@
 /**
-* @file parallel_fastflow.cpp
+ * @file parallel_fastflow.cpp
  * @brief This code is a parallel implementation of the Wavefront
  *        computation using the FastFlow library.
  * @details It initialize a matrix of dimension NxN (parameter given as input).
@@ -12,16 +12,17 @@
  * @author Salvatore Salerno
  */
 
-#include <vector>
-#include <iostream>
 #include <chrono>
+#include <iostream>
 #include <thread>
+#include <vector>
 #include "../include/ff/ff.hpp"
 #include "../include/ff/farm.hpp"
-#include "./utils/square_matrix.h"
+#include "../include/ff/ff.hpp"
+#include "./utils/compute_range.h"
 #include "./utils/constants.h"
-#include "./utils/compute_elem.h"
 #include "./utils/diag_info.h"
+#include "./utils/square_matrix.h"
 
 
 /**
@@ -31,7 +32,7 @@
  * @param diag = obj containing information regarding the current diagonal
  * @param mtx = the matrix where to gather and store result
  */
-inline void ComputeChunk(const int id_chunk, const DiagInfo& diag, const SquareMtx& mtx) {
+inline void ComputeChunk(const int id_chunk, const DiagInfo &diag, SquareMtx &mtx) {
     // Determining the range
     // Be aware that elements start at position 1
     u64 start_range = ((id_chunk - 1) * diag.ff_chunk_size) + 1;
@@ -39,29 +40,7 @@ inline void ComputeChunk(const int id_chunk, const DiagInfo& diag, const SquareM
     if (end_range > diag.length || id_chunk == diag.num_actors) // Hotfix Out of Bounds
         end_range = diag.length;
 
-    // If start_range is out of bounds skip computation
-    if (start_range > diag.length)
-        return;
-
-    // Starting Computation
-    double temp = 0.0;
-    while(start_range <= end_range){
-
-        // Determining element
-        // ElemInfo curr_elem{mtx.length, num_diag, start_range};
-        u64 row = start_range - 1;
-        u64 col = row + diag.num;
-
-        // Computing element
-        ComputeElement(mtx, row, col, diag.num, temp);
-
-        // Storing the result
-        mtx.SetValue(row, col, temp);
-        mtx.SetValue(col, row, temp);
-
-        // Setting next element to compute
-        ++start_range;
-    }
+    ComputeRange(start_range, end_range, diag.length, diag.num, mtx);
 }
 
 
@@ -74,10 +53,12 @@ inline void ComputeChunk(const int id_chunk, const DiagInfo& diag, const SquareM
  *        computed the Emitter sends Tasks relative to the i+1
  *        diagonal.
  */
-struct Emitter final: ff::ff_monode_t<u8, u8> {
+struct Emitter final : ff::ff_monode_t<u8, u8> {
     // Constructor
-    explicit Emitter(SquareMtx &mtx, DiagInfo& diag, const u8 num_workers)
-        : num_workers(num_workers), mtx(mtx), diag(diag){send_tasks = true;}
+    explicit Emitter(SquareMtx &mtx, DiagInfo &diag, const u8 num_workers) :
+        num_workers(num_workers), mtx(mtx), diag(diag) {
+        send_tasks = true;
+    }
 
     /**
      * @brief It will be executed at the start of the farm and each time a Worker
@@ -93,12 +74,12 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
 
             // Check if all elements of the current diagonal
             // have been computed. If so start work on the next one.
-            if(active_workers == 0) {
+            if (active_workers == 0) {
                 diag.PrepareNextDiagonal();
                 send_tasks = true;
 
                 // If all diagonals have been computed we can terminate the farm
-                if(diag.num >= mtx.length) {
+                if (diag.num >= mtx.length) {
                     eosnotify();
                     return EOS;
                 }
@@ -106,11 +87,11 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
         }
 
         // Computing a new diagonal by sending Tasks to Workers
-        if(send_tasks) {
+        if (send_tasks) {
             SendTasks();
 
             // Compute its part (if it has any)
-            if(id_emitter != -1)
+            if (id_emitter != -1)
                 ComputeChunk(id_emitter, diag, mtx);
         }
 
@@ -128,45 +109,44 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
         u64 chunk_size = diag.ff_chunk_size;
 
         // Sending tasks until all elements of the matrix have been distributed
-        while(elems_to_send >= chunk_size && active_workers < num_workers) {
+        while (elems_to_send >= chunk_size && active_workers < num_workers) {
             // Sending tasks
-            auto* id_chunk = new u8{static_cast<u8>(active_workers + 1)};
+            auto *id_chunk = new u8{static_cast<u8>(active_workers + 1)};
             ff_send_out(id_chunk);
 
             // Updating params
-            if(elems_to_send <= chunk_size) // Avoid out of bounds
+            if (elems_to_send <= chunk_size) // Avoid out of bounds
                 elems_to_send = 0;
             else
                 elems_to_send -= chunk_size;
-            active_workers ++;
+            active_workers++;
 
 #ifndef DYNAMIC_CHUNK
-            chunk_size = static_cast<u64>(std::ceil(elems_to_send / (num_workers - active_workers)+1)  ));
-            if(chunk_size == 0) // Out of Bounds fix
+            chunk_size = static_cast<u64>(std::ceil(elems_to_send / (num_workers - active_workers) + 1));
+            if (chunk_size == 0) // Out of Bounds fix
                 chunk_size = 1;
             std::cout << "dynamic_chunk_size = " << chunk_size << std::endl;
         }
 #endif // DYNAMIC_CHUNK
 
         // Setting id_chunk for the Emitter
-        if(elems_to_send == 0)
+        if (elems_to_send == 0)
             id_emitter = -1;
         else
             id_emitter = active_workers + 1;
 
         // Update flag to be aware that for the current diagonal all tasks have been sent
         send_tasks = false;
-
     }
 
     // Parameters
-    bool send_tasks{false};      // Tells if we have to send tasks to Workers.
-    int id_emitter{0};           // Indicates which part of the diagonal the Emitter needs to compute
-    u8 active_workers{0};        // Active workers doing a computation
-    u8 num_workers{0};           // Total workers in the farm
-    SquareMtx& mtx;              // Reference to the matrix to compute.
-    DiagInfo& diag;              // Contains informations for what and when
-                                 // to send tasks to Workers
+    bool send_tasks{false}; // Tells if we have to send tasks to Workers.
+    int id_emitter{0}; // Indicates which part of the diagonal the Emitter needs to compute
+    u8 active_workers{0}; // Active workers doing a computation
+    u8 num_workers{0}; // Total workers in the farm
+    SquareMtx &mtx; // Reference to the matrix to compute.
+    DiagInfo &diag; // Contains informations for what and when
+                    // to send tasks to Workers
 };
 
 /**
@@ -178,11 +158,10 @@ struct Emitter final: ff::ff_monode_t<u8, u8> {
  * Receiver Type: Task*, it gets one from the Emitter.
  *                It represents the number of computed elements.
  */
-struct Worker final: ff::ff_node_t<u8> {
-    explicit Worker(SquareMtx& mtx, DiagInfo& diag)
-        : mtx(mtx), diag(diag){ id_chunk = 0; }
+struct Worker final : ff::ff_node_t<u8> {
+    explicit Worker(SquareMtx &mtx, DiagInfo &diag) : mtx(mtx), diag(diag) { id_chunk = 0; }
 
-    u8* svc(u8* task) override {
+    u8 *svc(u8 *task) override {
         id_chunk = *task;
 
         // Computing elemes
@@ -193,14 +172,13 @@ struct Worker final: ff::ff_node_t<u8> {
     }
 
     // PARAMS
-    SquareMtx& mtx;     // Reference of the matrix to compute
-    DiagInfo& diag;     // Contains informations updated by the Emitter regarding
-                        // the diagonal to compute
-    u8 id_chunk{0};     // Identifies which chunk of elems the Worker will compute, id_chunk in [1, num_workers]
+    SquareMtx &mtx; // Reference of the matrix to compute
+    DiagInfo &diag; // Contains informations updated by the Emitter regarding
+                    // the diagonal to compute
+    u8 id_chunk{0}; // Identifies which chunk of elems the Worker will compute, id_chunk in [1, num_workers]
     u64 start_range{0}; // Value used during a diag computation for telling the first element of the range
-    u64 end_range{0};   // Value used during a diag computation for telling the last element of the range
-    double temp{0.0};   // Value where to store temporary computations for an element
-
+    u64 end_range{0}; // Value used during a diag computation for telling the last element of the range
+    double temp{0.0}; // Value where to store temporary computations for an element
 };
 
 /**
@@ -209,13 +187,13 @@ struct Worker final: ff::ff_node_t<u8> {
  * @param[in] argc = the number of cmd arguments.
  * @note If no argument is passed, then we assume the matrix has default length
  */
-inline u8 SetNumThreads(const int argc, char* argv[]) {
+inline u8 SetNumThreads(const int argc, char *argv[]) {
     // Checking if the value has been passed in the CMD
-    if (argc >=3)
+    if (argc >= 3)
         return std::stoul(argv[2]);
 
     // If not try to use the maximum capacity of the Hardware
-    if(std::thread::hardware_concurrency() > 0)
+    if (std::thread::hardware_concurrency() > 0)
         return std::thread::hardware_concurrency();
 
     // If not use the default value
@@ -230,7 +208,7 @@ inline u8 SetNumThreads(const int argc, char* argv[]) {
  * @param[in] argc = the number of cmd arguments.
  * @note If no argument is passed, then we assume the matrix has default length
  */
-int main(const int argc, char* argv[]) {
+int main(const int argc, char *argv[]) {
     // Setting matrix length
     u64 mtx_length{default_length};
     if (argc >= 2) // If the user as passed its own lenght
@@ -251,12 +229,12 @@ int main(const int argc, char* argv[]) {
     Emitter emt{mtx, diag, static_cast<u8>(num_threads - 1)};
     ff::ff_Farm<> farm(
             [&](const u8 num_workers) {
-            std::vector<std::unique_ptr<ff::ff_node>> workers;
-            for(u8 i=0; i < num_workers; ++i)
-                workers.push_back(std::make_unique<Worker>(mtx, diag));
-            return workers;
-        }(num_threads - 1),
-        emt);
+                std::vector<std::unique_ptr<ff::ff_node>> workers;
+                for (u8 i = 0; i < num_workers; ++i)
+                    workers.push_back(std::make_unique<Worker>(mtx, diag));
+                return workers;
+            }(num_threads - 1),
+            emt);
     farm.remove_collector();
     farm.wrap_around();
 
@@ -266,8 +244,8 @@ int main(const int argc, char* argv[]) {
     // If we have a 1x1 matrix, then we do not need
     // to apply the computation
     if (mtx_length > 1) {
-        if(farm.run_and_wait_end() < 0) {
-            std::cerr<<"ERROR!!! An error occurred while running the farm";
+        if (farm.run_and_wait_end() < 0) {
+            std::cerr << "ERROR!!! An error occurred while running the farm";
             return EXIT_FAILURE;
         }
     }
