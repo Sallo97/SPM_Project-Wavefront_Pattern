@@ -3,7 +3,6 @@
 #include <iostream>
 #include <mpi.h>
 #include <vector>
-
 #include "utils/constants.h"
 #include "utils/diag_info.h"
 #include "utils/mpi_myinfo.h"
