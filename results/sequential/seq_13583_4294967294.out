@@ -1,0 +1,19 @@
+Sequential execution with argument: 64
+Time taken for sequential version: 0 milliseconds
+Sequential execution with argument: 128
+Time taken for sequential version: 0 milliseconds
+Sequential execution with argument: 256
+Time taken for sequential version: 5 milliseconds
+Sequential execution with argument: 512
+Time taken for sequential version: 36 milliseconds
+Sequential execution with argument: 1024
+Time taken for sequential version: 249 milliseconds
+Sequential execution with argument: 2048
+Time taken for sequential version: 1981 milliseconds
+Sequential execution with argument: 4096
+Time taken for sequential version: 17209 milliseconds
+Sequential execution with argument: 8192
+Time taken for sequential version: 135113 milliseconds
+Sequential execution with argument: 16384
+Time taken for sequential version: 1075536 milliseconds
+Sequential execution with argument: 32768

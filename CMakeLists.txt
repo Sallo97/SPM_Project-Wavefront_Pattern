@@ -14,7 +14,6 @@ if("${_host_name}" MATCHES "MacBook-Pro-di-Salvatore.local")
 
     # Manually setting compiler and flags
     set(CMAKE_CXX_COMPILER "/opt/homebrew/Cellar/llvm/18.1.8/bin/clang++")
-    set(CMAKE_CXX_FLAGS "-I/opt/homebrew/Cellar/open-mpi/5.0.3_1/include -L/opt/homebrew/Cellar/open-mpi/5.0.3_1/lib")
 
     # Manually setting OpenMP
     set(OpenMP_CXX_FLAGS "-fopenmp")
@@ -25,7 +24,6 @@ elseif("${_host_name}" MATCHES "spmln|node0[0-9]")
     MESSAGE("Setting up for SPMCluster")
 
     #Manually setting MPI
-    set(CMAKE_CXX_FLAGS "-I/opt/ohpc/pub/mpi/openmpi5-gnu12/5.0.3/include -L/opt/ohpc/pub/mpi/openmpi5-gnu12/5.0.3/lib -Wl,-rpath -Wl,/opt/ohpc/pub/mpi/openmpi5-gnu12/5.0.3/lib -Wl, -lmpi")
     set(OpenMP_CXX_FLAGS "-fopenmp")
     find_package(OpenMP)
 endif()
