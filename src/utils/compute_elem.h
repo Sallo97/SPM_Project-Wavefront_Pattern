@@ -13,10 +13,6 @@
 #include "square_matrix.h"
 #include "constants.h"
 
-#if defined(_OPENMP)
-#include<omp.h>
-#endif
-
 /**
  * @brief Compute for an element mtx[i][j] the DotProduct of the vectors
  *        mtx[i][j] = cube_root( DotProd(row[i],col[j]) ).
@@ -42,12 +38,6 @@ inline void ComputeElement(const SquareMtx & mtx, const u64& elem_row, const u64
     // that contains the same elements
 
     // Starting the DotProduct Computation
-#if defined(_OPENMP)
-  // int max_threads = omp_get_max_threads();
-  // std::cout << "OPENMP Maximum number of threads: " << max_threads << std::endl;
-#endif
-
-#pragma omp parallel for
     for(u64 i = 0; i < vec_length; ++i)
         res += mtx.GetValue(elem_row, elem_row + i)
                 * mtx.GetValue(elem_col, elem_row + 1 + i);
