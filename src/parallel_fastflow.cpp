@@ -125,7 +125,6 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
             chunk_size = static_cast<u64>(std::ceil(elems_to_send / (num_workers - active_workers) + 1));
             if (chunk_size == 0) // Out of Bounds fix
                 chunk_size = 1;
-            std::cout << "updated chunk_size = " << chunk_size << std::endl;
 #endif // DYNAMIC_CHUNK
 
         }
@@ -254,6 +253,6 @@ int main(const int argc, char *argv[]) {
     // Printing duration and closing program
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Time taken for FastFlown version: " << duration.count() << " milliseconds" << std::endl;
-    mtx.PrintMtx();
+    //mtx.PrintMtx();
     return EXIT_SUCCESS;
 }

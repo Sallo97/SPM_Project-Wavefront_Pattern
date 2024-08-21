@@ -53,9 +53,6 @@ struct WavefrontNode {
             iteration++;
             SetRole(iteration);
             const u64 sub_mtx_length = static_cast<u64>(std::ceil(my_mtx.length / active_nodes));
-            if(my_role == MASTER || my_role == LAST)
-                std::cout << "sub_mtx_length = " << sub_mtx_length << std::endl;
-
             // [ALL] Compute SubMatrix
             ComputeSubMatrix(sub_mtx_length);
 
@@ -277,7 +274,7 @@ int main(int argc, char *argv[]) {
 
     // [LAST] Print resulting matrix e duration
     if(my_node.my_role == LAST) {
-        my_node.my_mtx.PrintMtx();
+        //my_node.my_mtx.PrintMtx();
         const auto end = std::chrono::steady_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         std::cout << "Time taken for MPI version: " << duration.count() << " milliseconds" << std::endl;
