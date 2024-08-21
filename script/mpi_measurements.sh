@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name = mpi_measurements
-#SBATCH --output = ../results/mpi/mpi_%A_%a.out
-#SBATCH --error = ../results/mpi/error_mpi_%A_%a.err
-#SBATCH --time = 02:00:00 #2hr (hrs:min:sec)
+#SBATCH --job-name=mpi_measurements
+#SBATCH --output=../results/mpi/mpi_%A_%a.out
+#SBATCH --error=../results/mpi/error_mpi_%A_%a.err
+#SBATCH --time=02:00:00 #2hr (hrs:min:sec)
 
 # Number of execution of the program
 num_execution=10
