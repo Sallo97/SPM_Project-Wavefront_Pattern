@@ -6,31 +6,31 @@
 #SBATCH --time=02:00:00 #2hr (hrs:min:sec)
 
 # Case 4 threads
-num_execution=10
-start_val=64 #from 64 to 32'768
+num_execution=9
+start_val=64 #from 64 to 16'384
 for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
-  echo "FF Static Chunk execution with argument: $arg"
+  echo "FF Dynamic Chunk execution with argument: $arg"
   ../build/src/parallel_fastflow_dynamic_chunk $arg 4
 done
 
 # Case 8 threads
 num_execution=10
-start_val=64 #from 64 to 32'768
+start_val=64 #from 64 to 16'384
 for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
-  echo "FF Static Chunk execution with argument: $arg"
+  echo "FF Dynamic Chunk execution with argument: $arg"
   ../build/src/parallel_fastflow_dynamic_chunk $arg 8
 done
 
 # Case 16 threads
 num_execution=10
-start_val=64 #from 64 to 32'768
+start_val=64 #from 64 to 16'384
 for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
-  echo "FF Static Chunk execution with argument: $arg"
+  echo "FF Dynamic Chunk execution with argument: $arg"
   ../build/src/parallel_fastflow_dynamic_chunk $arg 16
 done
