@@ -14,6 +14,7 @@
  * @brief Computes the elements in the given range
  * @param start_range = first element of the diagonal
  * @param end_range = last elem of the diagonal
+ * @param length = length of the matrix
  * @param num_diag = number of the diagonal
  * @param mtx = obj storing the matrix
  */
@@ -24,11 +25,6 @@ inline void ComputeRange(u64 start_range, const u64 end_range, const u64 length,
 
     // Starting Computation
     double temp = 0.0;
-
-// #if defined(_OPENMP)
-//     int max_threads = omp_get_max_threads();
-//     std::cout << "OPENMP Maximum number of threads: " << max_threads << std::endl;
-// #endif
 
 #pragma omp parallel for
     for(u64 elem = start_range; elem <=end_range; ++elem) {
@@ -44,6 +40,8 @@ inline void ComputeRange(u64 start_range, const u64 end_range, const u64 length,
             mtx.SetValue(row, col, temp);
         }
     }
+
+
 }
 
 #endif //COMPUTE_RANGE_H
