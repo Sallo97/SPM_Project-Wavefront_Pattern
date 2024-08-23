@@ -83,7 +83,7 @@ struct WavefrontNode {
     void MergeMatrices(const u64 sub_mtx_length, int iteration) {
 
         // // [ALL] Create common request buffer
-        MPI_Request* req_buff{};
+        auto* req_buff = new MPI_Request{};
 
         // [SUPPORTER] Send to Master the computed matrix
         if(my_role == SUPPORTER) {
@@ -122,6 +122,9 @@ struct WavefrontNode {
                 }
             }
         }
+
+        // [ALL] Deallocating send_buffer befor exiting
+        delete req_buff;
     }
 
     /**
