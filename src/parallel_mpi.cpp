@@ -29,7 +29,7 @@ struct WavefrontNode {
     /**
      * The base constructor of the class.
      * It inizialize a Node and start its WaveFront execution.
-     * @param my_rank = rank of the node
+     git  @param my_rank = rank of the node
      * @param total_nodes = total number of nodes at beginning of execution
      * @param mtx_length = whole length of the matrix
      */
@@ -75,12 +75,15 @@ struct WavefrontNode {
 
     /**
      * @brief Merges the matrices computed by the Master and its adjecent Supporters.
-     *        [SUPPORTERS] will send their computation to the Master in batch of rows.
+     *        [SUPPORTERS] will send their computation to the Master in a single chunk.
      *        [MASTER] will receive the Supporter's computation and store their results
      *                 in its matrix
      * @return
      */
     void MergeMatrices(const u64 sub_mtx_length, int iteration) {
+
+        // // [ALL] Create common request buffer
+        MPI_Request* req_buff{};
 
         // [SUPPORTER] Send to Master the computed matrix
         if(my_role == SUPPORTER) {
@@ -88,35 +91,35 @@ struct WavefrontNode {
             const u64 first_row = (my_id * sub_mtx_length);
             const u64 last_row = first_row + (sub_mtx_length - 1);
             const u64 num_rows = (last_row - first_row) + 1;
-
             const u64 offset = my_mtx.GetIndex(first_row, 0);
-            MPI_Send(my_mtx.data.data() + offset,
+            MPI_Isend(my_mtx.data.data() + offset,
                      static_cast<int>(my_mtx.length * num_rows),
                      MPI_DOUBLE,
                      my_master,
                      0,
-                     MPI_COMM_WORLD);
+                     MPI_COMM_WORLD,
+                     req_buff
+                     );
         }
 
         // [MASTER] Receive from supporter(s) their computed matrix
         else if(my_role == MASTER) {
+#pragma parallel for
             for(int i = 0; i < 2; ++i) {
+                if(my_supporters[i] != -1) {
+                    const u64 first_row = GetId(my_supporters[i], iteration) * sub_mtx_length;
+                    const u64 last_row = first_row + (sub_mtx_length-1);
+                    const u64 num_rows = (last_row - first_row) + 1;
+                    const u64 offset = my_mtx.GetIndex(first_row, 0);
 
-                if(my_supporters[i] == -1)
-                    break;
-
-                const u64 first_row = GetId(my_supporters[i], iteration) * sub_mtx_length;
-                const u64 last_row = first_row + (sub_mtx_length-1);
-                const u64 num_rows = (last_row - first_row) + 1;
-                MPI_Status* status{};
-                const u64 offset = my_mtx.GetIndex(first_row, 0);
-                MPI_Recv(my_mtx.data.data() + offset,
-                         static_cast<int>(my_mtx.length * num_rows),
-                         MPI_DOUBLE,
-                         my_supporters[i],
-                         0,
-                         MPI_COMM_WORLD,
-                         status);
+                    MPI_Irecv(my_mtx.data.data() + offset,
+                             static_cast<int>(my_mtx.length * num_rows),
+                             MPI_DOUBLE,
+                             my_supporters[i],
+                             0,
+                             MPI_COMM_WORLD,
+                             req_buff);
+                }
             }
         }
     }
@@ -274,7 +277,7 @@ int main(int argc, char *argv[]) {
 
     // [LAST] Print resulting matrix e duration
     if(my_node.my_role == LAST) {
-        //my_node.my_mtx.PrintMtx();
+        my_node.my_mtx.PrintMtx();
         const auto end = std::chrono::steady_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         std::cout << "Time taken for MPI version: " << duration.count() << " milliseconds" << std::endl;
