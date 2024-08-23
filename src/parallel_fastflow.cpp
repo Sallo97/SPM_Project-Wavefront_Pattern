@@ -27,15 +27,20 @@
 /**
  * @brief Computes a given chunks of elements of the matrix
  *        following the Wavefront Computation
- * @param id_chunk = recognizes which range of the elems to compute
+ * @param id_chunk = recognizes which range of the elems to compute, start at position 1
  * @param diag = obj containing information regarding the current diagonal
  * @param mtx = the matrix where to gather and store result
  */
 inline void ComputeChunk(const int id_chunk, const DiagInfo &diag, SquareMtx &mtx) {
     // Determining the range
     // Be aware that elements start at position 1
-    u64 start_range = ((id_chunk - 1) * diag.ff_chunk_size) + 1;
-    u64 end_range = start_range + (diag.ff_chunk_size - 1);
+    u64 chunk_size = diag.ff_chunk_size;
+#ifdef DYNAMIC_CHUNK
+    chunk_size = diag.GetDynamicChunkSize(id_chunk);
+#endif // DYNAMIC_CHUNK
+
+    u64 const start_range = ((id_chunk - 1) * chunk_size) + 1;
+    u64 end_range = start_range + (chunk_size - 1);
     if (end_range > diag.length || id_chunk == diag.num_actors) // Hotfix Out of Bounds
         end_range = diag.length;
 
@@ -125,6 +130,7 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
             chunk_size = static_cast<u64>(std::ceil(elems_to_send / (num_workers - active_workers) + 1));
             if (chunk_size == 0) // Out of Bounds fix
                 chunk_size = 1;
+            diag.AddDynamicChunk(active_workers, chunk_size);
 #endif // DYNAMIC_CHUNK
 
         }
@@ -253,6 +259,6 @@ int main(const int argc, char *argv[]) {
     // Printing duration and closing program
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Time taken for FastFlown version: " << duration.count() << " milliseconds" << std::endl;
-    //mtx.PrintMtx();
+    mtx.PrintMtx();
     return EXIT_SUCCESS;
 }
