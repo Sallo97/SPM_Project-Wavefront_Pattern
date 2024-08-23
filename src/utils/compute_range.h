@@ -26,7 +26,7 @@ inline void ComputeRange(u64 start_range, const u64 end_range, const u64 length,
     // Starting Computation
     double temp = 0.0;
 
-#pragma omp parallel for
+#pragma omp parallel for private(temp)
     for(u64 elem = start_range; elem <=end_range; ++elem) {
         // Determining element
         // ElemInfo curr_elem{mtx.length, num_diag, start_range};
