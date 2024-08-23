@@ -24,7 +24,7 @@ elseif("${_host_name}" MATCHES "spmln|node0[0-9]")
     MESSAGE("Setting up for SPMCluster")
 
     #Manually setting MPI
-    set(OpenMP_CXX_FLAGS "-fopenmp")
+    set(OpenMP_CXX_FLAGS "-pthreads -fopenmp")
     find_package(OpenMP)
 endif()
 
