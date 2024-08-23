@@ -97,7 +97,7 @@ struct SquareMtx {
      *  @param[in] row = row of the elem
      *  @param[in] col = col of the elem
     */
-    bool IsElemAlreadyDone(u64 row, u64 col) {
+    [[nodiscard]] bool IsElemAlreadyDone(const u64 row, const u64 col) const {
       return (data[GetIndex(row,col)] != 0);
     }
 
