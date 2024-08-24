@@ -82,9 +82,6 @@ struct WavefrontNode {
      */
     void MergeMatrices(const u64 sub_mtx_length, int iteration) {
 
-        // // [ALL] Create common request buffer
-        auto* req_buff = new MPI_Request{};
-
         // [SUPPORTER] Send to Master the computed matrix
         if(my_role == SUPPORTER) {
 
@@ -92,14 +89,12 @@ struct WavefrontNode {
             const u64 last_row = first_row + (sub_mtx_length - 1);
             const u64 num_rows = (last_row - first_row) + 1;
             const u64 offset = my_mtx.GetIndex(first_row, 0);
-            MPI_Isend(my_mtx.data.data() + offset,
+            MPI_Send(my_mtx.data.data() + offset,
                      static_cast<int>(my_mtx.length * num_rows),
                      MPI_DOUBLE,
                      my_master,
                      0,
-                     MPI_COMM_WORLD,
-                     req_buff
-                     );
+                     MPI_COMM_WORLD);
         }
 
         // [MASTER] Receive from supporter(s) their computed matrix
@@ -111,20 +106,20 @@ struct WavefrontNode {
                     const u64 last_row = first_row + (sub_mtx_length-1);
                     const u64 num_rows = (last_row - first_row) + 1;
                     const u64 offset = my_mtx.GetIndex(first_row, 0);
-
-                    MPI_Irecv(my_mtx.data.data() + offset,
+                    auto* send_buff = new MPI_Status{};
+                    MPI_Recv(my_mtx.data.data() + offset,
                              static_cast<int>(my_mtx.length * num_rows),
                              MPI_DOUBLE,
                              my_supporters[i],
                              0,
                              MPI_COMM_WORLD,
-                             req_buff);
+                             send_buff);
+                    // [MASTER] delete allocated buffer
+                    delete send_buff;
                 }
             }
         }
 
-        // [ALL] Deallocating send_buffer befor exiting
-        delete req_buff;
     }
 
     /**
