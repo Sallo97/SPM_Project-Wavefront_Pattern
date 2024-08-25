@@ -85,41 +85,48 @@ struct WavefrontNode {
         // [SUPPORTER] Send to Master the computed matrix
         if(my_role == SUPPORTER) {
 
-            const u64 first_row = (my_id * sub_mtx_length);
-            const u64 last_row = first_row + (sub_mtx_length - 1);
-            const u64 num_rows = (last_row - first_row) + 1;
-            const u64 offset = my_mtx.GetIndex(first_row, 0);
-            MPI_Send(my_mtx.data.data() + offset,
-                     static_cast<int>(my_mtx.length * num_rows),
-                     MPI_DOUBLE,
-                     my_master,
-                     0,
-                     MPI_COMM_WORLD);
+            const u64 first_row_col = (my_id * sub_mtx_length);
+            const u64 last_row = first_row_col + (sub_mtx_length - 1);
+#pragma parallel for
+            for(u64 row = first_row_col; row <= last_row; ++row) {
+                const u64 offset = my_mtx.GetIndex(row, first_row_col); // the column of the first element is
+                                                                       // determined in the same way we compute
+                                                                       // the first row, so we reuse the value
+                MPI_Send(my_mtx.data.data() + offset,
+                        static_cast<int>(sub_mtx_length),
+                        MPI_DOUBLE,
+                    my_master,
+                        0,
+                        MPI_COMM_WORLD);
+            }
         }
 
         // [MASTER] Receive from supporter(s) their computed matrix
         else if(my_role == MASTER) {
+
 #pragma parallel for
             for(int i = 0; i < 2; ++i) {
                 if(my_supporters[i] != -1) {
                     const u64 first_row = GetId(my_supporters[i], iteration) * sub_mtx_length;
                     const u64 last_row = first_row + (sub_mtx_length-1);
-                    const u64 num_rows = (last_row - first_row) + 1;
-                    const u64 offset = my_mtx.GetIndex(first_row, 0);
                     auto* send_buff = new MPI_Status{};
-                    MPI_Recv(my_mtx.data.data() + offset,
-                             static_cast<int>(my_mtx.length * num_rows),
-                             MPI_DOUBLE,
-                             my_supporters[i],
-                             0,
-                             MPI_COMM_WORLD,
-                             send_buff);
+#pragma parallel for
+                    for(u64 row = first_row; row <= last_row; ++row) {
+                        const u64 offset = my_mtx.GetIndex(row, first_row);
+                        MPI_Recv(my_mtx.data.data() + offset,
+                                static_cast<int>(sub_mtx_length),
+                                MPI_DOUBLE,
+                                my_supporters[i],
+                                0,
+                                MPI_COMM_WORLD,
+                                send_buff
+                                );
+                    }
                     // [MASTER] delete allocated buffer
                     delete send_buff;
                 }
             }
         }
-
     }
 
     /**
