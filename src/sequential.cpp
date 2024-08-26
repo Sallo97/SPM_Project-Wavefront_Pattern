@@ -71,5 +71,6 @@ int main(const int argc, char *argv[]) {
 
     // Printing duration and closing program
     std::cout << "Time taken for sequential version: " << duration.count() << " milliseconds" << std::endl;
+    // mtx.PrintMtx();
     return EXIT_SUCCESS;
 }

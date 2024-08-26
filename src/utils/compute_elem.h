@@ -1,8 +1,8 @@
 /**
-* @file compute_elem.h
+ * @file compute_elem.h
  * @brief This code contains the common function ComputeElement which computes
- *        the element in a WaveFront Computation. It is used by both the sequential
- *        and FastFlow implementation, so for better reusability it has been putted here.
+ *        the element in a WaveFront Computation. Since it is used by all
+ *        implementations, for better reusability it has been putted here.
  * @author Salvatore Salerno
  */
 
@@ -10,12 +10,9 @@
 #define COMPUTE_ELEM_H
 
 #include "cmath"
-#include "square_matrix.h"
 #include "constants.h"
+#include "square_matrix.h"
 
-#if defined(_OPENMP)
-#include <omp.h>
-#endif
 
 /**
  * @brief Compute for an element mtx[i][j] the DotProduct of the vectors
@@ -27,9 +24,9 @@
  * @param[in] vec_length = the length of the vectors of the DotProduct
  *                         (usually is equal to the diagonal where the elem is from).
  * @param[out] res = where to store the result
-*/
-inline void ComputeElement(const SquareMtx & mtx, const u64& elem_row, const u64& elem_col,
-                           const u64& vec_length, double& res) {
+ */
+inline void ComputeElement(const SquareMtx &mtx, const u64 &elem_row, const u64 &elem_col, const u64 &vec_length,
+                           double &res) {
     // Reset the result value
     res = 0.0;
 
@@ -37,18 +34,17 @@ inline void ComputeElement(const SquareMtx & mtx, const u64& elem_row, const u64
     // const u64& fst_vec_row = elem_row;   const u64& fst_vec_col = elem_row;
     // const u64& snd_vec_row = elem_col;   const u64 snd_vec_col = elem_row + 1;
 
-    // In reality We do not work with the column vector
+    // !!! In reality We do not work with the column vector
     // but with a row in the lower triangular
-    // that contains the same elements
+    // that contains the same elements !!!
 
-#pragma omp parallel for reduction(+:res)
+#pragma omp parallel for reduction(+ : res)
     // Starting the DotProduct Computation
-    for(u64 i = 0; i < vec_length; ++i)
-        res += mtx.GetValue(elem_row, elem_row + i)
-                * mtx.GetValue(elem_col, elem_row + 1 + i);
+    for (u64 i = 0; i < vec_length; ++i)
+        res += mtx.GetValue(elem_row, elem_row + i) * mtx.GetValue(elem_col, elem_row + 1 + i);
 
     // Storing the cuberoot of the final result
     res = std::cbrt(res);
 }
 
-#endif //COMPUTE_ELEM_H
+#endif // COMPUTE_ELEM_H

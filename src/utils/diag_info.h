@@ -15,7 +15,8 @@
 /**
  * @brief Contains informations about the current diagonal to compute
  *        when and what diagonal to send to the Workers.
- *        ONLY THE EMITTER MODIFIES IT, THE WORKER ONLY READ IT
+ *        In FastFlow only the Emitter updates it.
+ *        In MPI every node has its local copy.
  */
 struct DiagInfo {
     /**

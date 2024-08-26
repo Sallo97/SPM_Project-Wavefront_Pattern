@@ -103,8 +103,7 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
     }
 
     /**
-     * @brief Sends tasks (i.e. range of elems of mtx) to Workers to compute the
-     *        current diagonal.
+     * @brief Sends tasks to Workers that tells them to start work on the next diagonal.
      */
     void SendTasks() {
         // Setting base params
@@ -132,7 +131,6 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
                 chunk_size = 1;
             diag.AddDynamicChunk(active_workers, chunk_size);
 #endif // DYNAMIC_CHUNK
-
         }
         // Setting id_chunk for the Emitter
         if (elems_to_send == 0)
@@ -160,8 +158,6 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
  *        matrix the Worker needs to compute. After it computes
  *        them, it send through a Feedback Channel the number of
  *        elements it computed.
- * Receiver Type: Task*, it gets one from the Emitter.
- *                It represents the number of computed elements.
  */
 struct Worker final : ff::ff_node_t<u8> {
     explicit Worker(SquareMtx &mtx, DiagInfo &diag) : mtx(mtx), diag(diag) { id_chunk = 0; }
@@ -191,7 +187,7 @@ struct Worker final : ff::ff_node_t<u8> {
  * @param[in] argc = the number of cmd arguments.
  * @note If no argument is passed, then we assume the matrix has default length
  */
-inline u8 SetNumThreads(const int argc, char *argv[]) {
+inline u8 ReturnNumThreads(const int argc, char *argv[]) {
     // Checking if the value has been passed in the CMD
     if (argc >= 3)
         return std::stoul(argv[2]);
@@ -219,7 +215,7 @@ int main(const int argc, char *argv[]) {
                    // for the matrix use it instead
         mtx_length = std::stoul(argv[1]);
 
-    const u8 num_threads = SetNumThreads(argc, argv);
+    const u8 num_threads = ReturnNumThreads(argc, argv);
 
     std::cout << "mtx_lenght = " << mtx_length << "\n"
               << "hardware_concurrency = " << std::thread::hardware_concurrency() << "\n"
@@ -259,6 +255,6 @@ int main(const int argc, char *argv[]) {
     // Printing duration and closing program
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Time taken for FastFlown version: " << duration.count() << " milliseconds" << std::endl;
-    mtx.PrintMtx();
+    // mtx.PrintMtx();
     return EXIT_SUCCESS;
 }

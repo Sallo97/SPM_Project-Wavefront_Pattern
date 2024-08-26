@@ -11,8 +11,6 @@
 
 using u64 = std::uint64_t;
 using u8 = std::uint8_t;
-using vec_int = std::vector<int>;
-using vec_double = std::vector<double>;
 constexpr u64 default_length = 1 << 12;  // it is read as "2^12"
 constexpr u8 default_workers = 8;
 constexpr int PRINCIPAL_RANK = 0;

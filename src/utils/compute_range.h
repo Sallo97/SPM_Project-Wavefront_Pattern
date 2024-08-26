@@ -1,14 +1,15 @@
-//
-// Created by Salvatore Salerno on 19/08/24.
-//
+/**
+*  @file compute_range.h
+ * @brief This code contains the common function ComputeRange which computes
+ *        a given range of elements for a diagonal in the Wavefront Computation.
+ *        Since it is used by all implementations, for better reusability it has been putted here.
+ * @author Salvatore Salerno
+ */
 
 #ifndef COMPUTE_RANGE_H
 #define COMPUTE_RANGE_H
 
 #include "compute_elem.h"
-#if defined(_OPENMP)
-#include<omp.h>
-#endif
 
 /**
  * @brief Computes the elements in the given range

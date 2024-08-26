@@ -21,21 +21,22 @@ enum Role { MASTER, SUPPORTER, LAST };
 
 /**
  * @brief Represents a node of the MPI's Wavefront Computations.
- *        Each node can have two roles:
- *          - MASTER = Will merge its matrix with the ones produced by the Supporters
+ *        Each node can have three roles:
+ *          - MASTER = Computes its portion of the matrix and  merge its result with
+ *                     the ones produced by its Supporter(s)
  *          - SUPPORTER = Computed a portion of the matrix and send it to its Master
+ *          - LAST = The last active node. Will compute the remaining portion of the matrix and end the execution.
  */
 struct WavefrontNode {
     /**
      * The base constructor of the class.
      * It inizialize a Node and start its WaveFront execution.
-     git  @param my_rank = rank of the node
+     * @param my_rank = rank of the node
      * @param total_nodes = total number of nodes at beginning of execution
      * @param mtx_length = whole length of the matrix
      */
     WavefrontNode(const int my_rank, const int total_nodes, const u64 mtx_length) :
-        my_rank(my_rank), total_nodes(total_nodes), my_mtx(mtx_length)
-    {
+        my_rank(my_rank), total_nodes(total_nodes), my_mtx(mtx_length) {
         active_nodes = total_nodes;
         my_id = my_rank;
         MPIWavefront();
@@ -48,7 +49,7 @@ struct WavefrontNode {
 
         int iteration{0};
 
-        while(true) {
+        while (true) {
             // [ALL] Update iteration and role
             iteration++;
             SetRole(iteration);
@@ -57,11 +58,11 @@ struct WavefrontNode {
             ComputeSubMatrix(sub_mtx_length);
 
             // [SUPPORTER] & [MASTER] associated merge their matrices
-            if(my_role == MASTER || my_role == SUPPORTER)
+            if (my_role == MASTER || my_role == SUPPORTER)
                 MergeMatrices(sub_mtx_length, iteration);
 
             // [LAST] & [SUPPORTER] terminate their execution
-            if(my_role == LAST || my_role == SUPPORTER)
+            if (my_role == LAST || my_role == SUPPORTER)
                 break;
 
             // [MASTER] UpdateStatus
@@ -70,7 +71,6 @@ struct WavefrontNode {
             // if(my_rank == 0)
             //     my_mtx.PrintMtx();
         }
-
     }
 
     /**
@@ -78,49 +78,38 @@ struct WavefrontNode {
      *        [SUPPORTERS] will send their computation to the Master in a single chunk.
      *        [MASTER] will receive the Supporter's computation and store their results
      *                 in its matrix
-     * @return
      */
     void MergeMatrices(const u64 sub_mtx_length, int iteration) {
 
         // [SUPPORTER] Send to Master the computed matrix
-        if(my_role == SUPPORTER) {
+        if (my_role == SUPPORTER) {
 
             const u64 first_row_col = (my_id * sub_mtx_length);
             const u64 last_row = first_row_col + (sub_mtx_length - 1);
 #pragma parallel for
-            for(u64 row = first_row_col; row <= last_row; ++row) {
+            for (u64 row = first_row_col; row <= last_row; ++row) {
                 const u64 offset = my_mtx.GetIndex(row, first_row_col); // the column of the first element is
-                                                                       // determined in the same way we compute
-                                                                       // the first row, so we reuse the value
-                MPI_Send(my_mtx.data.data() + offset,
-                        static_cast<int>(sub_mtx_length),
-                        MPI_DOUBLE,
-                    my_master,
-                        0,
-                        MPI_COMM_WORLD);
+                                                                        // determined in the same way we compute
+                                                                        // the first row, so we reuse the value
+                MPI_Send(my_mtx.data.data() + offset, static_cast<int>(sub_mtx_length), MPI_DOUBLE, my_master, 0,
+                         MPI_COMM_WORLD);
             }
         }
 
         // [MASTER] Receive from supporter(s) their computed matrix
-        else if(my_role == MASTER) {
+        else if (my_role == MASTER) {
 
 #pragma parallel for
-            for(int i = 0; i < 2; ++i) {
-                if(my_supporters[i] != -1) {
+            for (int i = 0; i < 2; ++i) {
+                if (my_supporters[i] != -1) {
                     const u64 first_row = GetId(my_supporters[i], iteration) * sub_mtx_length;
-                    const u64 last_row = first_row + (sub_mtx_length-1);
-                    auto* send_buff = new MPI_Status{};
+                    const u64 last_row = first_row + (sub_mtx_length - 1);
+                    auto *send_buff = new MPI_Status{};
 #pragma parallel for
-                    for(u64 row = first_row; row <= last_row; ++row) {
+                    for (u64 row = first_row; row <= last_row; ++row) {
                         const u64 offset = my_mtx.GetIndex(row, first_row);
-                        MPI_Recv(my_mtx.data.data() + offset,
-                                static_cast<int>(sub_mtx_length),
-                                MPI_DOUBLE,
-                                my_supporters[i],
-                                0,
-                                MPI_COMM_WORLD,
-                                send_buff
-                                );
+                        MPI_Recv(my_mtx.data.data() + offset, static_cast<int>(sub_mtx_length), MPI_DOUBLE,
+                                 my_supporters[i], 0, MPI_COMM_WORLD, send_buff);
                     }
                     // [MASTER] delete allocated buffer
                     delete send_buff;
@@ -137,7 +126,7 @@ struct WavefrontNode {
         DiagInfo diag{sub_mtx_length, active_nodes};
 
         // Computing submatrix
-        while(diag.num < sub_mtx_length) {
+        while (diag.num < sub_mtx_length) {
             const u64 start_range = (my_id * sub_mtx_length) + 1;
             const u64 end_range = start_range + (diag.length - 1);
             ComputeRange(start_range, end_range, my_mtx.length, diag.num, my_mtx);
@@ -150,11 +139,10 @@ struct WavefrontNode {
      */
     void PrintStatus() const {
 
-        std::cout << "Process " << my_rank << " with id " << my_id
-                  << " active_nodes " << active_nodes << " and role ";
-        if(my_role == MASTER)
+        std::cout << "Process " << my_rank << " with id " << my_id << " active_nodes " << active_nodes << " and role ";
+        if (my_role == MASTER)
             std::cout << "Master with my_supporters = " << my_supporters[0] << " " << my_supporters[1];
-        else if(my_role == SUPPORTER)
+        else if (my_role == SUPPORTER)
             std::cout << "Supporter with my_master = " << my_master;
         else
             std::cout << "Last";
@@ -162,7 +150,7 @@ struct WavefrontNode {
     }
 
     /**
-     * @brief determines for the current iteration if the number of active nodes
+     * @brief Determines for the current iteration if the number of active nodes
      *        and the ID of the node
      */
     void UpdateStatus() {
@@ -226,7 +214,9 @@ struct WavefrontNode {
      * @param iteration = in which iteration we are
      * @return the rank of the given id
      */
-    static int GetId(const int rank, const int iteration) { return static_cast<int>(rank / std::pow(2, (iteration - 1))); }
+    static int GetId(const int rank, const int iteration) {
+        return static_cast<int>(rank / std::pow(2, (iteration - 1)));
+    }
 
     // Parameters
     int my_id{-1}; // ID in respect to the active nodes. IT IS NOT THE RANK!
@@ -263,8 +253,8 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
 
-    if(num_nodes > mtx_length) {
-        if(my_rank == 0)
+    if (num_nodes > mtx_length) {
+        if (my_rank == 0)
             std::cerr << "ERROR!!! the number of used nodes cannot be greater that the length of the matrix!\n"
                       << "Therefore the program will forcly set the number of nodes equal to the length of the matrix"
                       << std::endl;
@@ -281,8 +271,8 @@ int main(int argc, char *argv[]) {
     WavefrontNode my_node{my_rank, num_nodes, mtx_length};
 
     // [LAST] Print resulting matrix e duration
-    if(my_node.my_role == LAST) {
-        my_node.my_mtx.PrintMtx();
+    if (my_node.my_role == LAST) {
+        // my_node.my_mtx.PrintMtx();
         const auto end = std::chrono::steady_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         std::cout << "Time taken for MPI version: " << duration.count() << " milliseconds" << std::endl;

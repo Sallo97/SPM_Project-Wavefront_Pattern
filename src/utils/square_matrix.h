@@ -1,7 +1,9 @@
 /**
  * @file square_matrix.h
  * @brief The Square matrix class used throught the project.
- * @details TODO ADD A DESCRIPTION
+ * @details This class represents a std::vector<double> interpreted as a Matrix, offering
+ *          a set of methods which facilitate the use for the user by abstracting it
+ *          as a real matrix.
  * @author Salvatore Salerno
  */
 
