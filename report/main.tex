@@ -1,0 +1,89 @@
+\documentclass[11pt]{report}
+\usepackage{graphicx} % Required for inserting images
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{todonotes}
+\usepackage{multirow}
+\usepackage[font=footnotesize]{caption}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{hyperref}
+
+\usepackage{titlesec}
+% Formato delle intestazioni
+\titleformat{\chapter}[block]
+  {\normalfont\Huge\bfseries}{\thechapter.}{0.5em}{\Huge}
+\titlespacing*{\chapter}{0pt}{0pt}{25pt}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{mathtools}
+\usepackage{mathrsfs}
+\usepackage{ragged2e}
+\usepackage{tikz}
+\usepackage{fancyvrb}\usepackage{listings}% http://ctan.org/pkg/listings
+\lstset{
+  basicstyle=\ttfamily,
+  mathescape
+}
+\usepackage{longtable}
+\usepackage{booktabs} 
+\usepackage{ upgreek }
+\usepackage{subcaption}
+\usepackage{fontawesome5} %serve per aggiungere un cuoricino che btw è \faHeart{}
+\usepackage{verbatim} % serve per commentare piu righe insieme
+%\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+%\usepackege{tikz}
+\usepackage{array}
+\linespread{1.05}
+\renewcommand{\arraystretch}{1.5}
+\usepackage{geometry}
+\geometry{
+a4paper,
+left=25mm,
+right=25mm,
+top=20mm,
+bottom=20mm,
+}
+\usepackage{booktabs}
+\usepackage{amssymb}
+\usepackage{wasysym}
+\usepackage{amsmath}
+\usepackage{centernot}
+
+\begin{document}
+
+\begin{titlepage}
+
+\begin{figure}
+    \centering\includegraphics[scale=0.5]{img/marchio_unipi 3.png}
+\end{figure}
+
+\begin{center}
+    \Huge{\textbf{Parallel and Distributed Systems: Paradigms and Models}\\
+    \textbf{2023/2024}}\\
+    \Huge{\textbf{Project report}}\\
+    \vspace{5mm}
+    \textit{\huge{Distributed Wavefront Computation}}\par
+\end{center}
+
+
+
+\begin{center}
+    \vspace{120mm}
+    {\bf\huge{Salvatore Salerno}}
+    \par
+    \huge May 2024
+\end{center}
+\end{titlepage}
+
+\cleardoublepage
+\pagenumbering{gobble}
+\cleardoublepage
+\pagenumbering{arabic}
+
+\input{chapters/Introduction}
+\input{chapters/Sequential_Implementation}
+\input{chapters/FastFlow}
+\input{chapters/MPI}
+\end{document}
