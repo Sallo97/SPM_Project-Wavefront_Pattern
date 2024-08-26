@@ -7,8 +7,6 @@ set(CMAKE_CXX_STANDARD 20)
 include_directories(include)
 cmake_host_system_information(RESULT _host_name QUERY HOSTNAME)
 
-MESSAGE("Machine = " "${_host_name}")
-
 if("${_host_name}" MATCHES "MacBook-Pro-di-Salvatore.local")
     MESSAGE("Setting up for my machine")
 
@@ -20,13 +18,14 @@ if("${_host_name}" MATCHES "MacBook-Pro-di-Salvatore.local")
     set(OpenMP_CXX_LIB_NAMES "omp")
     set(OpenMP_CXX_LIBRARIES "/opt/homebrew/Cellar/llvm/18.1.8/lib/libomp.dylib")
 
-elseif("${_host_name}" MATCHES "spmln|node0[0-9]")
+else()
     MESSAGE("Setting up for SPMCluster")
 
     #Manually setting MPI
     set(OpenMP_CXX_FLAGS "-pthreads -fopenmp")
     find_package(OpenMP)
 endif()
+
 
 set(CMAKE_BUILD_TYPE Release)
 find_package(MPI REQUIRED)
