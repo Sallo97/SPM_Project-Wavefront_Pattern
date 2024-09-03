@@ -6,5 +6,5 @@ cmake-build-debug/
 ./src/CMakeFiles
 ./include/DS_Store
 ./src/DS_Store
-.build/
-.cmake-build-debug_project/
+build/
+cmake-build-debug_project/
