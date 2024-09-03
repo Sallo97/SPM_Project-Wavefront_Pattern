@@ -22,6 +22,7 @@ scripts=(
     "./sequential_measurements.sh"
     "./ff_static_measurements.sh"
     "./ff_dynamic_measurements.sh"
+    "./mpi_2_process.sh"
     "./mpi_4_process.sh"
     "./mpi_8_process.sh"
 )

@@ -7,6 +7,7 @@ dirs=(
     "../results/sequential/log"
     "../results/fastflow_dynamic/log"
     "../results/fastflow_static/log"
+    "../results/mpi/2_nodes/log"
     "../results/mpi/4_nodes/log"
     "../results/mpi/8_nodes/log"
 )
