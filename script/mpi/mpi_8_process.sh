@@ -1,38 +1,43 @@
 #!/bin/bash
 #SBATCH --job-name=mpi_8_measurements
-#SBATCH --output=../../results/mpi/mpi_8_nodes%A_%a.out
-#SBATCH --error=../../results/mpi/error_mpi_8_nodes%A_%a.err
-#SBATCH --time=00:30:00 #30 min (hrs:min:sec)
+#SBATCH --output=../../results/mpi/8_nodes/log/mpi_8_nodes%A_%a.out
+#SBATCH --error=../../results/mpi/8_nodes/log/error_mpi_8_nodes%A_%a.err
+#SBATCH --time=00:50:00 #50 min (hrs:min:sec)
 #SBATCH --nodes=8
-#SBATCH --ntasks-per-node=2
+#SBATCH --ntasks-per-node=4
 
-# Number of execution of the program
-num_execution=4
-start_val=2048 #from 2048 to 16'384
+# Common params
+num_execution=9
+start_val=64 #from 64 to 16'384
+nodes=8
+
+
+# 1 Process x Node (8 MPI Process Total)
+process_per_node=1
+total_processes=$((nodes * process_per_node))
 for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
   echo "MPI execution 1 task per node, 8 nodes, with argument: $arg"
-  # shellcheck disable=SC2086
-  mpirun -np 8 --map-by ppr:1:node ../../build/src/parallel_mpi $arg
+  mpirun -np $total_processes ../../build/src/parallel_mpi $arg
 done
 
-# Number of execution of the program
-num_execution=4
-start_val=2048 #from 2048 to 16'384
+# 2 Process x Node (16 MPI Process Total)
+process_per_node=2
+total_processes=$((nodes * process_per_node))
 for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
   echo "MPI execution 2 task per node, 8 nodes (total 16 processes), with argument: $arg"
-  mpirun -np 16 --map-by ppr:2:node ../../build/src/parallel_mpi $arg
+  mpirun -np $total_processes ../../build/src/parallel_mpi $arg
 done
 
-# Number of execution of the program
-num_execution=4
-start_val=2048 #from 64 to 32'768
+# 4 Process x Node (32 MPI Process Total)
+process_per_node=4
+total_processes=$((nodes * process_per_node))
 for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
   echo "MPI execution 4 tasks per node, 8 nodes (total 32 processes), with argument: $arg"
-  mpirun -np 8 --map-by ppr:4:node ../../build/src/parallel_mpi $arg
+  mpirun -np $total_processes ../../build/src/parallel_mpi $arg
 done

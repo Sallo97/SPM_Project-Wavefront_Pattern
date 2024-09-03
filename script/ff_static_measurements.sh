@@ -1,13 +1,15 @@
 #!/bin/bash
 #SBATCH --job-name=ff_measurements
 #SBATCH --nodes=1
-#SBATCH --output=../results/fastflow_static/ff_%A_%a.out
-#SBATCH --error=../results/fastflow_static/error_ff_%A_%a.err
-#SBATCH --time=02:00:00 #2hr (hrs:min:sec)
+#SBATCH --output=../results/fastflow_static/log/ff_%A_%a.out
+#SBATCH --error=../results/fastflow_static/log/error_ff_%A_%a.err
+#SBATCH --time=00:50:00 (hrs:min:sec)
+
+# Common params
+num_execution=9
+start_val=64 # from 64 to 16'384
 
 # Case 4 threads
-num_execution=10
-start_val=64 #from 64 to 32'768
 for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
@@ -16,8 +18,6 @@ do
 done
 
 # Case 8 threads
-num_execution=10
-start_val=64 #from 64 to 32'768
 for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
@@ -26,8 +26,6 @@ do
 done
 
 # Case 16 threads
-num_execution=10
-start_val=64 #from 64 to 32'768
 for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
