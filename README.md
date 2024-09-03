@@ -17,13 +17,26 @@ For the each of the upper diagonals, the elements are computed as:
 mtx[i][j] = ³√( Σ (from k = 0 to j - 1) ( mtx[i][k] * mtx[j][k + 1] ) )
 ```
 
-## Compilation
+## Automatic Compilation and Execution
 Start by cloning the following repository:
 ```bash
 $ git clone https://github.com/Sallo97/SPM_Project-Wavefront_Pattern
 $ cd SPM_Project-Wavefront_Pattern-main
 ```
-For compiling the project it is necessary the FastFlow library, MPI Library and OpenMP. 
+Then you can automatically compile the project using the following script:
+```bash
+$ cd script/
+$ ./compile.sh
+```
+
+If you want to compile and execute all possible tests (there are a *LOT* of them) you can execute instead:
+```bash
+$ cd script/
+$ ./general.sh
+```
+
+## Manual Compilation
+After cloning the repository, for compiling the project it is necessary the FastFlow library, MPI Library and OpenMP. 
 The FastFlow library is already installed inside the 'include' directory.
 If it is the first time that the FastFlow library is used on the machine, it is necessary to configure it calling the 'mapping_string' script:
 ```bash
@@ -47,8 +60,13 @@ which uses static chunk sizes.
 - **parallel_fastflow_dynamic_chunk [length of a row/column of the matrix] [num of theads to spawn]** = a parallel execution using FastFlow
   which uses dynamic chunk sizes.
 - **parallel_mpi [lenght of a row/column of the matrix]** = parallel execution utilizing MPI and OMP.
+
 ### Scripts
-In the root directory inside the 'script' folder are present some script that tests the various binary. 
+In the root directory inside the 'script' folder are present the following scripts:
+- **general.sh** = compiles the project and execute all test cases.
+- **compile.sh** = compiles the project inside the build directory at root.
+- **log_dirs.sh** = checks if the log directories inside result are present, if not creates them.
+- **measurement_scripts** = contains the tests for all implementations.
 
 ### More Information
 More information regarding the implementation and performance measurements of the project are present in the 
