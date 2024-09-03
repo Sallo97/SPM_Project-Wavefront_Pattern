@@ -34,7 +34,7 @@
 inline void ComputeChunk(const int id_chunk, const DiagInfo &diag, SquareMtx &mtx) {
     // Determining the range
     // Be aware that elements start at position 1
-    u64 chunk_size = diag.ff_chunk_size;
+    u64 chunk_size = diag.ComputeFFChunkSize();
 #ifdef DYNAMIC_CHUNK
     chunk_size = diag.GetDynamicChunkSize(id_chunk);
 #endif // DYNAMIC_CHUNK
@@ -109,7 +109,7 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
         // Setting base params
         u64 elems_to_send = diag.length;
 
-        u64 chunk_size = diag.ff_chunk_size;
+        u64 chunk_size = diag.ComputeFFChunkSize();
 
         // Sending tasks until all elements of the matrix have been distributed
         while (elems_to_send >= chunk_size && active_workers < num_workers) {

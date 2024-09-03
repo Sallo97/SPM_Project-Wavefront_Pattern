@@ -29,9 +29,7 @@ struct DiagInfo {
 #ifdef DYNAMIC_CHUNK
         , id_chunks{static_cast<u64>(num_actors), 0}
 #endif
-    {
-        PrepareNextDiagonal();
-    }
+    {PrepareNextDiagonal();}
 
     /**
      * @brief This method prepare all parameters of the Emitter for computing
@@ -40,9 +38,8 @@ struct DiagInfo {
     void PrepareNextDiagonal() {
         num++;
         length--;
-        ComputeFFChunkSize();
 #ifdef DYNAMIC_CHUNK
-        AddDynamicChunk(0, ff_chunk_size);
+        AddDynamicChunk(0, ComputeFFChunkSize());
 #endif
     }
 
@@ -62,13 +59,14 @@ struct DiagInfo {
 #endif
 
     /**
-     * @brief Sets the chunk size used in the FastFlow case.
+     * @brief Returns the chunk size used in the static FastFlow case.
      *        chunk_size = upper_integer_part(diagonal_length / num_workers)
      */
-    void ComputeFFChunkSize() {
-        ff_chunk_size = std::ceil((static_cast<double>(length) / static_cast<double>(num_actors)));
+    [[nodiscard]] u64 ComputeFFChunkSize() const {
+        u64 ff_chunk_size = std::ceil((static_cast<double>(length) / static_cast<double>(num_actors)));
         if (ff_chunk_size == 0)
             ff_chunk_size = 1;
+        return ff_chunk_size;
     }
 
     // PARAMETERS
@@ -77,7 +75,6 @@ struct DiagInfo {
 #ifdef DYNAMIC_CHUNK
     std::vector<u64> id_chunks; // Contains the dynamic chunk for each id_chunk
 #endif
-    u64 ff_chunk_size{0};
     u64 num{0}; // Number of the current diagonal. The major diagonal is counted as 0.
 };
 
