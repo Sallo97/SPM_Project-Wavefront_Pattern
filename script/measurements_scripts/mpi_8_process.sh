@@ -10,7 +10,7 @@
 num_execution=9
 start_val=64 #from 64 to 16'384
 nodes=8
-
+bin=$"../../build/src/parallel_mpi"
 
 # 1 Process x Node (8 MPI Process Total)
 process_per_node=1
@@ -19,7 +19,7 @@ for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
   echo "MPI execution 1 task per node, 8 nodes, with argument: $arg"
-  mpirun -np $total_processes ../../build/src/parallel_mpi $arg
+  mpirun -np $total_processes ${bin} $arg
 done
 
 # 2 Process x Node (16 MPI Process Total)
@@ -29,7 +29,7 @@ for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
   echo "MPI execution 2 task per node, 8 nodes (total 16 processes), with argument: $arg"
-  mpirun -np $total_processes ../../build/src/parallel_mpi $arg
+  mpirun -np $total_processes ${bin} $arg
 done
 
 # 4 Process x Node (32 MPI Process Total)
@@ -39,5 +39,5 @@ for i in $(seq 0 $((num_execution-1)))
 do
   arg=$((start_val * (2 ** i)))
   echo "MPI execution 4 tasks per node, 8 nodes (total 32 processes), with argument: $arg"
-  mpirun -np $total_processes ../../build/src/parallel_mpi $arg
+  mpirun -np $total_processes ${bin} $arg
 done

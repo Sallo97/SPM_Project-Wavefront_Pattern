@@ -19,14 +19,15 @@ echo "OK, next"
 
 # List of measurement script
 scripts=(
-    "sequential_measurements.sh"
-    "ff_static_measurements.sh"
-    "ff_dynamic_measurements.sh"
-    "./mpi/mpi_4_process.sh"
-    "./mpi/mpi_8_process.sh"
+    "./sequential_measurements.sh"
+    "./ff_static_measurements.sh"
+    "./ff_dynamic_measurements.sh"
+    "./mpi_4_process.sh"
+    "./mpi_8_process.sh"
 )
 
 # Loop through each script and execute it
+cd "./measurements_scripts" || { echo "Failed to change directory to ./measurements_scripts"; exit 1; }
 for script in "${scripts[@]}"; do
     echo "Running $script..."
 
