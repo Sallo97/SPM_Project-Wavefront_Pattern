@@ -20,10 +20,10 @@ echo "OK, next"
 # List of measurement script
 scripts=(
     "sequential_measurements.sh"
-#    "ff_static_measurements.sh"
-#    "ff_dynamic_measurements.sh"
-#    "./mpi/mpi_4_process.sh"
-#    "./mpi/mpi_8_process.sh"
+    "ff_static_measurements.sh"
+    "ff_dynamic_measurements.sh"
+    "./mpi/mpi_4_process.sh"
+    "./mpi/mpi_8_process.sh"
 )
 
 # Loop through each script and execute it
