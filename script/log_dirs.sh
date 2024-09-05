@@ -1,9 +1,18 @@
 #!/bin/bash
-
+#SBATCH --job-name=logdirs
+#SBATCH --time-min=5
+#SBATCH --nodes=1
 # This script checks if the log directories are present and if not it creates them
 
 # Paths of all logs directories
 dirs=(
+    "../results"
+    "../results/sequential"
+    "../results/fastflow_dynamic"
+    "../results/fastflow_static"
+    "../results/mpi/2_nodes"
+    "../results/mpi/4_nodes"
+    "../results/mpi/8_nodes"
     "../results/sequential/log"
     "../results/fastflow_dynamic/log"
     "../results/fastflow_static/log"

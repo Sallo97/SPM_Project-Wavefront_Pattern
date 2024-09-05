@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=ff_measurements
+#SBATCH --job-name=ff_dyn
 #SBATCH --nodes=1
 #SBATCH --output=../../results/fastflow_dynamic/log/ff_%A_%a.out
 #SBATCH --error=../../results/fastflow_dynamic/log/error_ff_%A_%a.err
 #SBATCH --time-min=50
 
 # Common params
-num_execution=7
-start_val=256 #from 64 to 16'384
+num_execution=5
+start_val=256 #from 256 to 8192
 bin=$"../../build/src/parallel_fastflow_dynamic_chunk"
 
 # Case 2 threads

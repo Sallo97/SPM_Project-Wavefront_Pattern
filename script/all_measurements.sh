@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=all-measurements
+#SBATCH --job-name=s_ff_mpi
 #SBATCH --time=03:00:00
 #SBATCH --nodes=8
 

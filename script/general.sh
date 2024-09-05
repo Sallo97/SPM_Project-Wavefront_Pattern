@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=all_together
-#SBATCH --time=03:00:00 #30 min (hrs:min:sec)
+#SBATCH --job-name=all
+#SBATCH --time=03:00:00
 #SBATCH --nodes=8
 
 # This script compiles the project, checks for log directories and executes all measurements scripts

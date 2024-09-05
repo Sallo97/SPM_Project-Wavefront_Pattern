@@ -1,4 +1,7 @@
 #!/bin/bash
+#SBATCH --job-name=compile
+#SBATCH --time-min=10
+#SBATCH --nodes=1
 
 # This script compiles the project. The binaries are inside the build/src directory
 
