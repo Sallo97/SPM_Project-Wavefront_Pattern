@@ -26,9 +26,6 @@ struct DiagInfo {
      */
     explicit DiagInfo(const u64 base_length, const int num_workers) :
         num_actors(num_workers), length(base_length)
-#ifdef DYNAMIC_CHUNK
-        , id_chunks{static_cast<u64>(num_actors), 0}
-#endif
     {PrepareNextDiagonal();}
 
     /**
@@ -38,43 +35,11 @@ struct DiagInfo {
     void PrepareNextDiagonal() {
         num++;
         length--;
-#ifdef DYNAMIC_CHUNK
-        AddDynamicChunk(0, ComputeFFChunkSize());
-#endif
-    }
-
-#ifdef DYNAMIC_CHUNK
-    /**
-     * @brief Adds the dynamic chunk_size of id_chunk in the associated array
-     * @param[in] id_chunk = the id_chunk, consider they start at position 1
-     * @param[in] val = the chunk_size to store
-     */
-    void AddDynamicChunk(const int id_chunk, const u64 val) { id_chunks[id_chunk - 1] = val; }
-
-    /**
-     * @brief Adds the dynamic chunk_size of id_chunk in the associated array
-     * @param[in] id_chunk = the id_chunk, consider they start at position 1.
-     */
-    [[nodiscard]] u64 GetDynamicChunkSize(const int id_chunk) const { return id_chunks[id_chunk - 1]; }
-#endif
-
-    /**
-     * @brief Returns the chunk size used in the static FastFlow case.
-     *        chunk_size = upper_integer_part(diagonal_length / num_workers)
-     */
-    [[nodiscard]] u64 ComputeFFChunkSize() const {
-        u64 ff_chunk_size = std::ceil((static_cast<double>(length) / static_cast<double>(num_actors)));
-        if (ff_chunk_size == 0)
-            ff_chunk_size = 1;
-        return ff_chunk_size;
     }
 
     // PARAMETERS
     const int num_actors;
     u64 length{0}; // Number of elements of the curr. diagonal.
-#ifdef DYNAMIC_CHUNK
-    std::vector<u64> id_chunks; // Contains the dynamic chunk for each id_chunk
-#endif
     u64 num{0}; // Number of the current diagonal. The major diagonal is counted as 0.
 };
 

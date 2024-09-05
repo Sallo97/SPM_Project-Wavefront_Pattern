@@ -57,7 +57,7 @@ struct WavefrontNode {
             // [ALL] Compute SubMatrix
             ComputeSubMatrix(sub_mtx_length);
 
-            // [SUPPORTER] & [MASTER] associated merge their matrices
+            // [SUPPORTER] & [MASTER] merge their matrices
             if (my_role == MASTER || my_role == SUPPORTER)
                 MergeMatrices(sub_mtx_length, iteration);
 

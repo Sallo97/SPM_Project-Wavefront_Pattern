@@ -23,22 +23,26 @@
 #include "./utils/diag_info.h"
 #include "./utils/square_matrix.h"
 
-
 /**
  * @brief Computes a given chunks of elements of the matrix
  *        following the Wavefront Computation
  * @param id_chunk = recognizes which range of the elems to compute, start at position 1
  * @param diag = obj containing information regarding the current diagonal
  * @param mtx = the matrix where to gather and store result
+ * @param chunk_sizes = contains the chunk_size to use.
  */
-inline void ComputeChunk(const int id_chunk, const DiagInfo &diag, SquareMtx &mtx) {
-    // Determining the range
-    // Be aware that elements start at position 1
-    u64 chunk_size = diag.ComputeFFChunkSize();
+inline void ComputeChunk(const int id_chunk, const DiagInfo &diag, SquareMtx &mtx, std::vector<u64> &chunk_sizes) {
+    // Getting chunk_sizes:
+    // Dynamic case : its dynamic and depends on the associated id_chunk (note that id_chunk stats at 1 while chunks start at 0
+    // Static case : chunk_sizes are all equal thus just get the one at position 0 in the array
 #ifdef DYNAMIC_CHUNK
-    chunk_size = diag.GetDynamicChunkSize(id_chunk);
+    u64 chunk_size = chunk_sizes[id_chunk - 1];
+#else
+    u64 chunk_size = chunk_sizes[0];
 #endif // DYNAMIC_CHUNK
 
+    // Determining the range
+    // Be aware that elements start at position 1
     u64 const start_range = ((id_chunk - 1) * chunk_size) + 1;
     u64 end_range = start_range + (chunk_size - 1);
     if (end_range > diag.length || id_chunk == diag.num_actors) // Hotfix Out of Bounds
@@ -59,8 +63,8 @@ inline void ComputeChunk(const int id_chunk, const DiagInfo &diag, SquareMtx &mt
  */
 struct Emitter final : ff::ff_monode_t<u8, u8> {
     // Constructor
-    explicit Emitter(SquareMtx &mtx, DiagInfo &diag, const u8 num_workers) :
-        num_workers(num_workers), mtx(mtx), diag(diag) {
+    explicit Emitter(SquareMtx &mtx, DiagInfo &diag, const u8 num_workers, std::vector<u64> &chunk_sizes) :
+        num_workers(num_workers), mtx(mtx), diag(diag), chunk_sizes(chunk_sizes) {
         send_tasks = true;
     }
 
@@ -96,7 +100,7 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
 
             // Compute its part (if it has any)
             if (id_emitter != -1)
-                ComputeChunk(id_emitter, diag, mtx);
+                ComputeChunk(id_emitter, diag, mtx, chunk_sizes);
         }
 
         return GO_ON;
@@ -108,8 +112,10 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
     void SendTasks() {
         // Setting base params
         u64 elems_to_send = diag.length;
-
-        u64 chunk_size = diag.ComputeFFChunkSize();
+        u64 chunk_size = std::ceil((static_cast<double>(diag.length) / static_cast<double>(num_workers + 1)));
+        if (chunk_size == 0)
+            chunk_size = 1;
+        chunk_sizes[0] = chunk_size;
 
         // Sending tasks until all elements of the matrix have been distributed
         while (elems_to_send >= chunk_size && active_workers < num_workers) {
@@ -118,6 +124,11 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
             ff_send_out(id_chunk);
 
             // Updating params
+#ifdef DYNAMIC_CHUNK
+            if(active_workers != 0) // The first case is already stored
+                chunk_sizes[active_workers] = chunk_size;
+#endif // DYNAMIC_CHUNK
+
             if (elems_to_send <= chunk_size) // Avoid out of bounds
                 elems_to_send = 0;
             else
@@ -126,12 +137,13 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
 
 #ifdef DYNAMIC_CHUNK
             // Recomputes dynamically the chunk_size
-            chunk_size = static_cast<u64>(std::ceil(elems_to_send / (num_workers - active_workers) + 1));
+            chunk_size = static_cast<u64>(std::ceil(elems_to_send / ((num_workers - active_workers) + 1)));
             if (chunk_size == 0) // Out of Bounds fix
                 chunk_size = 1;
-            diag.AddDynamicChunk(active_workers, chunk_size);
 #endif // DYNAMIC_CHUNK
+
         }
+
         // Setting id_chunk for the Emitter
         if (elems_to_send == 0)
             id_emitter = -1;
@@ -150,6 +162,7 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
     SquareMtx &mtx; // Reference to the matrix to compute.
     DiagInfo &diag; // Contains informations for what and when
                     // to send tasks to Workers
+    std::vector<u64> &chunk_sizes;  // Reference to the chunk_size vector
 };
 
 /**
@@ -160,13 +173,14 @@ struct Emitter final : ff::ff_monode_t<u8, u8> {
  *        elements it computed.
  */
 struct Worker final : ff::ff_node_t<u8> {
-    explicit Worker(SquareMtx &mtx, DiagInfo &diag) : mtx(mtx), diag(diag) { id_chunk = 0; }
+    explicit Worker(SquareMtx &mtx, DiagInfo &diag, std::vector<u64> &chunk_sizes) : mtx(mtx), diag(diag),
+        chunk_sizes(chunk_sizes){ id_chunk = 0; }
 
     u8 *svc(u8 *task) override {
         id_chunk = *task;
 
         // Computing elemes
-        ComputeChunk(id_chunk, diag, mtx);
+        ComputeChunk(id_chunk, diag, mtx, chunk_sizes);
 
         // Discarding arrived token and sending a new one
         return task;
@@ -179,6 +193,7 @@ struct Worker final : ff::ff_node_t<u8> {
     u64 start_range{0}; // Value used during a diag computation for telling the first element of the range
     u64 end_range{0}; // Value used during a diag computation for telling the last element of the range
     double temp{0.0}; // Value where to store temporary computations for an element
+    std::vector<u64> &chunk_sizes; // Reference of the array containg the chunk size
 };
 
 /**
@@ -221,17 +236,18 @@ int main(const int argc, char *argv[]) {
               << "hardware_concurrency = " << std::thread::hardware_concurrency() << "\n"
               << "num_threads = " << static_cast<int>(num_threads) << std::endl;
 
-    // Initialize Matrix and Diag
+    // Initialize common params
     SquareMtx mtx{mtx_length};
     DiagInfo diag{mtx.length, num_threads};
+    std::vector<u64>chunk_sizes(num_threads, 0); // Contains the chunk size for each chunk_id
 
     // Creating a Farm with Feedback Channels and no Collector
-    Emitter emt{mtx, diag, static_cast<u8>(num_threads - 1)};
+    Emitter emt{mtx, diag, static_cast<u8>(num_threads - 1), chunk_sizes};
     ff::ff_Farm<> farm(
             [&](const u8 num_workers) {
                 std::vector<std::unique_ptr<ff::ff_node>> workers;
                 for (u8 i = 0; i < num_workers; ++i)
-                    workers.push_back(std::make_unique<Worker>(mtx, diag));
+                    workers.push_back(std::make_unique<Worker>(mtx, diag, chunk_sizes));
                 return workers;
             }(num_threads - 1),
             emt);
@@ -255,6 +271,6 @@ int main(const int argc, char *argv[]) {
     // Printing duration and closing program
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Time taken for FastFlown version: " << duration.count() << " milliseconds" << std::endl;
-    // mtx.PrintMtx();
+    mtx.PrintMtx();
     return EXIT_SUCCESS;
 }
