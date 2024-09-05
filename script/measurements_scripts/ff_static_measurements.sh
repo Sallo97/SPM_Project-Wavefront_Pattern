@@ -10,6 +10,14 @@ num_execution=9
 start_val=64 # from 64 to 16'384
 bin=$"../../build/src/parallel_fastflow_static_chunk"
 
+# Case 2 threads
+for i in $(seq 0 $((num_execution-1)))
+do
+  arg=$((start_val * (2 ** i)))
+  echo "FF Static Chunk execution with argument: $arg"
+  ${bin} $arg 2
+done
+
 # Case 4 threads
 for i in $(seq 0 $((num_execution-1)))
 do

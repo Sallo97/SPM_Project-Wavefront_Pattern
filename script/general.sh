@@ -17,24 +17,8 @@ chmod +rwx "./log_dirs.sh"
 ./log_dirs.sh
 echo "OK, next"
 
-# List of measurement script
-scripts=(
-    "./sequential_measurements.sh"
-    "./ff_static_measurements.sh"
-    "./ff_dynamic_measurements.sh"
-    "./mpi_2_process.sh"
-    "./mpi_4_process.sh"
-    "./mpi_8_process.sh"
-)
-
-# Loop through each script and execute it
-cd "./measurements_scripts" || { echo "Failed to change directory to ./measurements_scripts"; exit 1; }
-for script in "${scripts[@]}"; do
-    echo "Running $script..."
-
-    # Make sure the script is executable and execute the script
-    chmod +x "$script"
-    ./"$script"
-done
-
-echo "OK, all done successfully! BYE BYE!"
+# Execute all steps
+echo "Executing all tests..."
+chmod +x "./all_measurements.sh"
+./all_measurements.sh
+echo "OK, All done! BYE BYE!"
