@@ -271,6 +271,5 @@ int main(const int argc, char *argv[]) {
     // Printing duration and closing program
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "Time taken for FastFlown version: " << duration.count() << " milliseconds" << std::endl;
-    mtx.PrintMtx();
     return EXIT_SUCCESS;
 }

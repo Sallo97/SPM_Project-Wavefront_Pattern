@@ -272,7 +272,6 @@ int main(int argc, char *argv[]) {
 
     // [LAST] Print resulting matrix e duration
     if (my_node.my_role == LAST) {
-        // my_node.my_mtx.PrintMtx();
         const auto end = std::chrono::steady_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         std::cout << "Time taken for MPI version: " << duration.count() << " milliseconds" << std::endl;
