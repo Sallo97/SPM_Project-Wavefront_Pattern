@@ -25,10 +25,10 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 
 else()
     MESSAGE("Setting up for SPMCluster")
+    find_package(OpenMP REQUIRED)
 
     #Manually setting MPI
-    set(OpenMP_CXX_FLAGS "-pthreads -fopenmp")
-    find_package(OpenMP)
+    set(OpenMP_CXX_FLAGS "-fopenmp")
 endif()
 
 find_package(Threads REQUIRED)
