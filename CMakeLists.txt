@@ -3,6 +3,7 @@ project(SPM_Project)
 
 # Setting constants
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_BUILD_TYPE Release)
 
 include_directories(include)
 cmake_host_system_information(RESULT _host_name QUERY HOSTNAME)
@@ -30,8 +31,7 @@ else()
     find_package(OpenMP)
 endif()
 
-
-set(CMAKE_BUILD_TYPE Release)
+find_package(Threads REQUIRED)
 find_package(MPI REQUIRED)
 include_directories(${MPI_INCLUDE_PATH} include/ff)
 add_subdirectory(src)
