@@ -4,14 +4,14 @@ The goal of this project is to optimize an algorithm by parallelization, utilizi
 \begin{equation}
     \forall i \in [0, n - 1].mtx[i][i] = (i+1)/n  
 \end{equation}
-For the each of the upper diagonals, the elements are computed as:
+For each of the upper diagonals, the elements are computed as:
 \begin{equation}
     \forall i \in [0, n - 1]. \forall j \in [i + 1, n - 1]. mtx[i][j] = \sqrt[3]{\sum_{k = 0}^{j - 1}mtx[i][k] * mtx[j][k + 1]}
 \end{equation}
 The element is obtained as the dot product between the row vector at index \textit{i} and the column vector at index \textit{j}, containing the elements prior to the one being computed. This means that to compute an element on the $\textit{z}^{th}$ diagonal, the elements of the previous diagonal must already be completed. In contrast, elements within the same diagonal can be computed independently of each other.
 
 \begin{figure}[h]
-    \centering\includegraphics[scale=0.25]{img/Introduction/WaveFrontExample.png}
+    \centering\includegraphics[scale=0.20]{img/Introduction/WaveFrontExample.png}
     
-    \caption{Example of a 8x8 Matrix generated using the Wavefront Computation}
+    \caption{Example of a 8x8 Matrix generated using the Wavefront Computation.}
 \end{figure}
